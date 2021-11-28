@@ -11,6 +11,7 @@
 
 #include "interrupt.h"
 
+#include "encoder.h"
 #include "time.h"
 
 #include <stm32g0xx_hal.h>
@@ -40,6 +41,8 @@ void PendSV_Handler (void )
 void SysTick_Handler( void )
 {
   HAL_IncTick();
+  enc_sw_irq_hdl();
+  enc_irq_hdl();
 }
 
 void TIM17_IRQHandler( void )

@@ -61,6 +61,7 @@ APP_INC_DIR := $(PROJECT_ROOT_DIR)/source/application/include \
 #
 
 APP_SRC_LIST += buzzer.c \
+                encoder.c \
                 interrupt.c \
                 main.c \
                 system_init.c \

@@ -79,3 +79,61 @@ uint8_t* utils_float_to_char( float val, uint8_t* out )
 
     return s;
 }
+
+void utils_reverse( uint8_t* s, uint32_t s_len )
+{
+    uint8_t  c;
+    uint32_t i;
+    uint32_t j;
+
+    j = ( s_len - 1 );
+
+    for ( i = 0;  i < j; i++ )
+    {
+        c    = s[i];
+        s[i] = s[j];
+        s[j] = c;
+        j--;
+    }
+}
+
+uint32_t utils_itoa( int32_t n, uint8_t* s, uint32_t s_max )
+{
+    uint32_t i;
+    bool_t   is_minus;
+    uint32_t nr;
+
+    if ( n < 0)
+    {
+        is_minus = TRUE;
+        nr       = (uint32_t)(-n);
+    }
+    else
+    {
+        is_minus = FALSE;
+        nr       = (uint32_t)n;
+    }
+
+    i = 0;
+    do
+    {
+        s[i] = ((uint8_t)( nr % 10 )) + '0';
+        i++;
+        nr /= 10;
+    }
+    while (( nr > 0 ) && ( i < s_max ));
+
+    if ( 0 == nr )
+    {
+        if ( FALSE != is_minus )
+        {
+            s[i] = '-';
+            i++;
+        }
+
+        s[i] = '\0';
+        utils_reverse( s, i );
+    }
+
+    return i;
+}
