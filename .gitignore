@@ -11,3 +11,4 @@
 *.cproject
 *.project
 **/.vscode/*
+**/build_*

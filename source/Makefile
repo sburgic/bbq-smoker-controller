@@ -75,10 +75,6 @@ APP_OBJ_DIR := $(BUILD_DIR)/app/$(BUILD_TYPE)/obj
 APP_EXE_DIR := $(BUILD_DIR)/app/$(BUILD_TYPE)/exe
 APP_DEP_DIR := $(BUILD_DIR)/app/$(BUILD_TYPE)/dep
 
-STM_CMSIS_LIB_OBJ_DIR := $(BUILD_DIR)/stm/cmsis/$(BUILD_TYPE)/obj
-STM_CMSIS_LIB_OUT_DIR := $(BUILD_DIR)/stm/cmsis/$(BUILD_TYPE)/lib
-STM_CMSIS_LIB_DEP_DIR := $(BUILD_DIR)/stm/cmsis/$(BUILD_TYPE)/dep
-
 STM_HAL_LIB_OBJ_DIR := $(BUILD_DIR)/stm/hal/$(BUILD_TYPE)/obj
 STM_HAL_LIB_OUT_DIR := $(BUILD_DIR)/stm/hal/$(BUILD_TYPE)/lib
 STM_HAL_LIB_DEP_DIR := $(BUILD_DIR)/stm/hal/$(BUILD_TYPE)/dep
@@ -86,9 +82,8 @@ STM_HAL_LIB_DEP_DIR := $(BUILD_DIR)/stm/hal/$(BUILD_TYPE)/dep
 # Libraries to create
 STM_HAL_LIB := stm32_hal.a
 
-# Libraries to be added to the build
-CC_LIBS := $(STM_CMSIS_LIB) \
-           $(STM_HAL_LIB)
+# Created libraries to be added to the build
+CC_LIBS := $(STM_HAL_LIB)
 
 # Include toolchain definitions
 include $(BASE_DIR)/toolchain_$(TOOLCHAIN).mk
@@ -105,8 +100,18 @@ CC_INC_FLAG          := -I
 STM_HAL_INC_PARAMS   := $(addprefix $(CC_INC_FLAG),$(STM_HAL_INC_DIR))
 APP_INC_PARAMS       := $(addprefix $(CC_INC_FLAG),$(APP_INC_DIR))
 
+#
+# Add existing libraries to the build
+#
+
+LIBS_ROOT_DIR := $(PROJECT_ROOT_DIR)/../libs
+
+LCD2WIRE_LIB_ROOT ?= $(LIBS_ROOT_DIR)/lcd2wire
+
+include $(LCD2WIRE_LIB_ROOT)/lcd2wire.mk
+
 # Create library include flags
-CC_LIBS_DIR := $(STM_HAL_LIB_OUT_DIR)
+CC_LIBS_DIR += $(STM_HAL_LIB_OUT_DIR)
 
 CC_LINK_INC_FLAG   := -L
 CC_LINK_INC_PARAMS := $(addprefix $(CC_LINK_INC_FLAG),$(CC_LIBS_DIR))
