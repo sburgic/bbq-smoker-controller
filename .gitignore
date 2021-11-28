@@ -10,3 +10,4 @@
 *.ccsproject
 *.cproject
 *.project
+**/.vscode/*
