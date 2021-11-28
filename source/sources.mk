@@ -33,6 +33,8 @@ STM_HAL_INC_DIR := $(STM_HAL_LIB_ROOT_DIR)/Inc \
 
 # STM HAL library list of files to be compiled
 STM_HAL_LIB_SRC_LIST := stm32g0xx_hal.c \
+                        stm32g0xx_hal_adc.c \
+                        stm32g0xx_hal_adc_ex.c \
                         stm32g0xx_hal_cortex.c \
                         stm32g0xx_hal_dma.c \
                         stm32g0xx_hal_dma_ex.c \
@@ -63,7 +65,9 @@ APP_SRC_LIST += buzzer.c \
                 main.c \
                 system_init.c \
                 system_stm32g0xx.c \
-                time.c
+                time.c \
+                utils.c \
+                vmon.c
 
 APP_SRC_LIST += startup_stm32g030xx.s
 
