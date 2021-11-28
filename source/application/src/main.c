@@ -13,6 +13,7 @@
 
 #include "buzzer.h"
 #include "encoder.h"
+#include "fan.h"
 #include "lcd2wire.h"
 #include "ptypes.h"
 #include "system_init.h"
@@ -59,20 +60,25 @@ int main( void )
     enc = enc_get_hdl();
     {
         if ( NULL == enc )
+
         {
             critical_error_handler();
         }
     }
 
-    ret = vmon_init();
+    ret = fan_init();
+    if ( STATUS_OK != ret )
+    {
+        critical_error_handler();
+    }
 
+    ret = vmon_init();
     if ( STATUS_OK != ret )
     {
         lcd_puts_xy((uint8_t*) "VMON error!", 0, 0 );
     }
     else
     {
-        lcd_puts_xy((uint8_t*) "VMON initialized.", 0, 0 );
         vmon_active = TRUE;
     }
 
