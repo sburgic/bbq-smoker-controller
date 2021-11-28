@@ -58,7 +58,8 @@ APP_INC_DIR := $(PROJECT_ROOT_DIR)/source/application/include \
 # List of application source files to be compiled
 #
 
-APP_SRC_LIST += interrupt.c \
+APP_SRC_LIST += buzzer.c \
+                interrupt.c \
                 main.c \
                 system_init.c \
                 system_stm32g0xx.c \

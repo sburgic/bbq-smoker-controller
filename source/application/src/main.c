@@ -11,6 +11,7 @@
 
 #include "main.h"
 
+#include "buzzer.h"
 #include "lcd2wire.h"
 #include "ptypes.h"
 #include "time.h"
@@ -21,6 +22,7 @@ int main( void )
     HAL_Init();
     system_clk_cfg();
     bsp_tmr_init();
+    buzzer_init();
     lcd_init();
 
     lcd_puts_xy( APP_WELCOME_TEXT_1, 3, 0 );
