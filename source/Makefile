@@ -107,8 +107,10 @@ APP_INC_PARAMS       := $(addprefix $(CC_INC_FLAG),$(APP_INC_DIR))
 LIBS_ROOT_DIR := $(PROJECT_ROOT_DIR)/../libs
 
 LCD2WIRE_LIB_ROOT ?= $(LIBS_ROOT_DIR)/lcd2wire
+ONE_WIRE_LIB_ROOT ?= $(LIBS_ROOT_DIR)/one_wire
 
 include $(LCD2WIRE_LIB_ROOT)/lcd2wire.mk
+include $(ONE_WIRE_LIB_ROOT)/one_wire.mk
 
 # Create library include flags
 CC_LIBS_DIR += $(STM_HAL_LIB_OUT_DIR)

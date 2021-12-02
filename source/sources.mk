@@ -55,7 +55,9 @@ APP_SRC_DIR := $(PROJECT_ROOT_DIR)/source/application/src
 APP_INC_DIR := $(PROJECT_ROOT_DIR)/source/application/include \
                $(STM_HAL_INC_DIR) \
                $(LIBS_ROOT_DIR) \
-               $(LIBS_ROOT_DIR)/lcd2wire/include
+               $(LIBS_ROOT_DIR)/lcd2wire/include \
+               $(LIBS_ROOT_DIR)/one_wire/include
+
 #
 # List of application source files to be compiled
 #

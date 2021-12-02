@@ -34,6 +34,8 @@ typedef struct
     volatile bool_t          pb_pressed; /* Updated when PB is pressed */
 } Enc_t;
 
+typedef Enc_t* Enc_Hdl_t;
+
 /* Initialize encoder */
 void enc_init ( void );
 /* Check and get new value from encoder */
@@ -43,6 +45,6 @@ void enc_irq_hdl ( void );
 /* Encoder PB irq handler */
 void enc_sw_irq_hdl ( void );
 /* Return encoder handle */
-Enc_t* enc_get_hdl ( void );
+Enc_Hdl_t enc_get_hdl ( void );
 
 #endif /* __ENCODER_H__ */

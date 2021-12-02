@@ -126,7 +126,7 @@ void enc_sw_irq_hdl ( void )
     }
 }
 
-Enc_t* enc_get_hdl ( void )
+Enc_Hdl_t enc_get_hdl ( void )
 {
     return &encoder;
 }

@@ -14,12 +14,14 @@
 #include "buzzer.h"
 #include "encoder.h"
 #include "fan.h"
-#include "lcd2wire.h"
 #include "ptypes.h"
 #include "system_init.h"
 #include "time.h"
 #include "utils.h"
 #include "vmon.h"
+
+#include <lcd2wire.h>
+#include <max31850.h>
 
 #define LCD_OUT_BUFF_SIZE (20)
 
@@ -38,10 +40,12 @@ static void critical_error_handler( void )
 
 int main( void )
 {
-    status_t ret;
-    uint8_t  out[LCD_OUT_BUFF_SIZE] = {0};
-    float    voltage;
-    Enc_t*   enc = NULL;
+    status_t       ret;
+    bool_t         bret;
+    uint8_t        out[LCD_OUT_BUFF_SIZE] = {0};
+    float          voltage;
+    Enc_Hdl_t      enc    = NULL;
+    Max31850_Hdl_t max_tm = NULL;
 
     HAL_Init();
     system_clk_cfg();
@@ -91,6 +95,18 @@ int main( void )
         enc->pb_pressed = FALSE;
     }
 
+    max_tm = max31850_get_hdl();
+
+    if ( NULL != max_tm )
+    {
+        ret = max31850_init( GPIOA, GPIO_PIN_2 );
+    }
+
+    if ( STATUS_OK != ret )
+    {
+        critical_error_handler();
+    }
+
     for (;;)
     {
         if ( FALSE != vmon_active )
@@ -107,6 +123,15 @@ int main( void )
             {
                 vmon_active = FALSE;
             }
+        }
+
+        bret = max31850_update();
+
+        if ( FALSE != bret )
+        {
+            max31850_temp_to_string( out, max_tm->last_temp_raw[0] );
+            lcd_puts_xy( "TM:", 0, 1 );
+            lcd_puts_xy_cl( out, 3, 1 );
         }
     }
 
