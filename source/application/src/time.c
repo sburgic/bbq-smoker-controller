@@ -52,19 +52,26 @@ void bsp_get_time( Bsp_Time* tv )
 {
     volatile uint64_t lo_t;
     volatile uint64_t hi_t;
-    uint16_t          master_tmp;
-    uint16_t          slave_tmp;
+    uint16_t hi_t_temp;
+    uint16_t master_tmp;
+    uint16_t slave_tmp;
+    uint16_t slave_tmp_2;
 
-    hi_t = (uint64_t) us_time_high;
-
-    slave_tmp   = us_time_low;
-    master_tmp  = tim17_base.Instance->CNT;
-
-    if ( slave_tmp != us_time_low )
+    do
     {
-        slave_tmp  = us_time_low;
-        master_tmp = tim17_base.Instance->CNT;
-    }
+        hi_t = (uint64_t) us_time_high;
+
+        do
+        {
+            slave_tmp   = us_time_low;
+            master_tmp  = tim17_base.Instance->CNT;
+            slave_tmp_2 = us_time_low;
+
+        } while ( slave_tmp != slave_tmp_2 );
+
+        hi_t_temp = (uint64_t) us_time_high;
+
+     } while ( hi_t != hi_t_temp );
 
     lo_t = (( slave_tmp << 16 ) | master_tmp );
 
@@ -83,12 +90,22 @@ void bsp_wait( Bsp_Time time, Bsp_Time_Base base )
     Bsp_Time act_time   = 0;
     Bsp_Time delay      = 0;
 
-    time = time * base;
+    time = ( time * base );
     bsp_get_time( &start_time );
     do
     {
         bsp_get_time( &act_time );
-        delay = act_time - start_time;
+
+        if ( act_time > start_time )
+        {
+            delay = ( act_time - start_time );
+        }
+        else
+        {
+            /* In case an overflow has occured in the meantime. */
+            delay = ( start_time - act_time );
+        }
+
     } while ( delay < time );
 }
 
@@ -105,17 +122,14 @@ void bsp_set_timeout( Bsp_Time      time
         start_time = (Bsp_Time) 0;
 
         bsp_get_time( &start_time );
-        *timeout = start_time + ( time * base );
+        *timeout = ( start_time + ( time * base ));
     }
 }
 
 bool_t bsp_is_timeout( Bsp_Time timeout )
 {
-    Bsp_Time act_time;
-    bool_t   ret;
-
-    ret      = FALSE;
-    act_time = (Bsp_Time) 0;
+    Bsp_Time act_time = 0;
+    bool_t   ret      = FALSE;
 
     bsp_get_time( &act_time );
 
@@ -141,7 +155,7 @@ void HAL_TIM_PeriodElapsedCallback( TIM_HandleTypeDef* tmr )
             us_time_low_overflow = TRUE;
         }
 
-        if (( 0 == us_time_low ) && ( FALSE != us_time_low_overflow ))
+        if (( 0xFFFF == us_time_low ) && ( FALSE != us_time_low_overflow ))
         {
             us_time_high++;
             us_time_low_overflow = FALSE;

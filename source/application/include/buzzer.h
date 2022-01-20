@@ -17,5 +17,7 @@
 void buzzer_init( void );
 void buzzer_off( void );
 void buzzer_on( void );
+void buzzer_set_toggle( bool_t state );
+void buzzer_irq_hdl( void );
 
 #endif /* __BUZZER_H__ */

@@ -13,12 +13,12 @@
 
 #include <stm32g0xx_hal.h>
 
-#define VMON_ADC_NO_OF_SAMPLES (100)
+#define VMON_ADC_NO_OF_SAMPLES (200)
 #define VMON_ADC_MAX_RETRIES   (5)
 #define VMON_ADC_TIMEOUT_MS    (1)
 
 static ADC_HandleTypeDef adc1;
-static const float       offset = -0.33; /* TODO: Store offset in flash */
+static const float       offset = -0.33; /* TODO: Store offset in flash. */
 
 status_t vmon_init( void )
 {

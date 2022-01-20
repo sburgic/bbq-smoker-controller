@@ -16,5 +16,7 @@
 
 status_t fan_init( void );
 status_t fan_start( void );
+void fan_set_load( uint8_t load );
+void fan_stop( void );
 
 #endif /* __FAN_H__ */

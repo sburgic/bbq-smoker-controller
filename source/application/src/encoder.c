@@ -104,8 +104,9 @@ void enc_irq_hdl ( void )
 
 void enc_sw_irq_hdl ( void )
 {
-    uint8_t now_sw;
+    uint8_t                 now_sw;
     static volatile uint8_t debounce;
+    static volatile bool_t  wait_for_release = FALSE;
 
     now_sw = HAL_GPIO_ReadPin ( GPIOA, GPIO_PIN_6 );
 
@@ -115,14 +116,25 @@ void enc_sw_irq_hdl ( void )
 
         if ( 0 == debounce )
         {
-            encoder.pb_pressed = TRUE;
+            wait_for_release = TRUE;
         }
     }
     else
     {
-        debounce = ENC_SW_DEBOUNCE_TIME;
-        /* Acknowledge and clear pb_pressed flag in application where needed */
-        /* encoder.pb_pressed = FALSE; */
+        if ( FALSE == wait_for_release )
+        {
+            debounce = ENC_SW_DEBOUNCE_TIME;
+        }
+        else
+        {
+            encoder.pb_pressed = TRUE;
+            wait_for_release   = FALSE;
+
+            /*
+            * NOTE: Acknowledge and clear pb_pressed flag
+            *       in application where needed.
+            */
+        }
     }
 }
 

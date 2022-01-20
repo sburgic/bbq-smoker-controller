@@ -123,6 +123,16 @@ status_t fan_start( void )
     return ret;
 }
 
+void fan_stop( void )
+{
+    HAL_TIM_PWM_Stop( &tim1, TIM_CHANNEL_1 );
+}
+
+void fan_set_load( uint8_t load )
+{
+
+}
+
 /* This function is implemented here on purpose!!
  * It is inkoved by HAL_TIM_PWM_Init()
  */

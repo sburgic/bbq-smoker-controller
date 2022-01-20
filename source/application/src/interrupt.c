@@ -11,6 +11,7 @@
 
 #include "interrupt.h"
 
+#include "buzzer.h"
 #include "encoder.h"
 #include "time.h"
 
@@ -43,6 +44,7 @@ void SysTick_Handler( void )
   HAL_IncTick();
   enc_sw_irq_hdl();
   enc_irq_hdl();
+  buzzer_irq_hdl();
 }
 
 void TIM17_IRQHandler( void )

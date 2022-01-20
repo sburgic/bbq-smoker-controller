@@ -15,6 +15,12 @@
 
 #include <stm32g0xx_hal.h>
 
+#define BUZZ_TOGGLE_TIME_MS (50)
+
+static bool_t   toggle_active = FALSE;
+static uint8_t  toggle_state  = 0;
+static uint16_t toggle_ticks  = BUZZ_TOGGLE_TIME_MS;
+
 void buzzer_init( void )
 {
     GPIO_InitTypeDef gpio = {0};
@@ -42,4 +48,43 @@ void buzzer_off( void )
 void buzzer_on( void )
 {
     HAL_GPIO_WritePin( GPIOB, GPIO_PIN_3, GPIO_PIN_SET );
+}
+
+void buzzer_set_toggle( bool_t state )
+{
+    if ( FALSE != state )
+    {
+        toggle_active = TRUE;
+        toggle_state  = TRUE;
+        buzzer_on();
+    }
+    else
+    {
+        toggle_active = FALSE;
+        toggle_state  = FALSE;
+        buzzer_off();
+    }
+}
+
+void buzzer_irq_hdl( void )
+{
+    if ( FALSE != toggle_active )
+    {
+        toggle_ticks--;
+
+        if ( 0 == toggle_ticks )
+        {
+            toggle_state ^= 1;
+            toggle_ticks  = BUZZ_TOGGLE_TIME_MS;
+
+            if ( 0 != toggle_state )
+            {
+                buzzer_on();
+            }
+            else
+            {
+                buzzer_off();
+            }
+        }
+    }
 }

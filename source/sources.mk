@@ -67,6 +67,8 @@ APP_SRC_LIST += buzzer.c \
                 fan.c \
                 interrupt.c \
                 main.c \
+                menu.c \
+                state.c \
                 system_init.c \
                 system_stm32g0xx.c \
                 time.c \

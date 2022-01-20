@@ -80,6 +80,15 @@ uint8_t* utils_float_to_char( float val, uint8_t* out )
     return s;
 }
 
+float utils_float_cels_to_fahr( float celsius )
+{
+    float ret;
+
+    ret = (( celsius * 1.8 ) + 32.0 );
+
+    return ret;
+}
+
 void utils_reverse( uint8_t* s, uint32_t s_len )
 {
     uint8_t  c;
