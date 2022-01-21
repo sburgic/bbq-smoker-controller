@@ -12,3 +12,8 @@
 *.project
 **/.vscode/*
 **/build_*
+cube/Core/*
+cube/Drivers/*
+cube/EWARM/*
+cube/.mxproject
+pcb/*.htm
