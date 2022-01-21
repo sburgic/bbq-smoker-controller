@@ -3,7 +3,7 @@
  **   fan.c
  **
  ** Purpose
- **   Fan control rouitnes
+ **   Fan control routines
  **
  ** Revision
  **   28-Nov-2021 (SSB) [] Initial

@@ -14,6 +14,7 @@
 #include "buzzer.h"
 #include "encoder.h"
 #include "fan.h"
+#include "flash.h"
 #include "menu.h"
 #include "ptypes.h"
 #include "state.h"
