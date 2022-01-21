@@ -63,8 +63,10 @@ APP_INC_DIR := $(PROJECT_ROOT_DIR)/source/application/include \
 #
 
 APP_SRC_LIST += buzzer.c \
+                configuration.c \
                 encoder.c \
                 fan.c \
+                flash.c \
                 interrupt.c \
                 main.c \
                 menu.c \

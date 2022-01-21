@@ -12,9 +12,9 @@
 #include "main.h"
 
 #include "buzzer.h"
+#include "configuration.h"
 #include "encoder.h"
 #include "fan.h"
-#include "flash.h"
 #include "menu.h"
 #include "ptypes.h"
 #include "state.h"
@@ -165,7 +165,6 @@ int main( void )
     enc_hdl = enc_get_hdl();
     {
         if ( NULL == enc_hdl )
-
         {
             critical_error_handler();
         }
@@ -186,14 +185,6 @@ int main( void )
     else
     {
         vmon_active = TRUE;
-    }
-
-    lcd_clear();
-
-    /* Reset encoder button if pressed during the startup. */
-    if ( FALSE != enc_hdl->pb_pressed )
-    {
-        enc_hdl->pb_pressed = FALSE;
     }
 
     max_hdl = max31850_get_hdl();
@@ -221,7 +212,22 @@ int main( void )
          }
     }
 
+    ret = config_init();
+    if ( STATUS_OK != ret )
+    {
+        lcd_puts_xy((uint8_t*) "Config error!", 0, 0 );
+        lcd_puts_xy((uint8_t*) "Using defaults!", 0, 1 );
+        bsp_wait( 1, BSP_TIME_SEC );
+    }
+
     fan_init();
+    lcd_clear();
+
+    /* Reset encoder button if pressed during the startup. */
+    if ( FALSE != enc_hdl->pb_pressed )
+    {
+        enc_hdl->pb_pressed = FALSE;
+    }
 
     for (;;)
     {

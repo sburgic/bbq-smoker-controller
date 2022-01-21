@@ -146,3 +146,50 @@ uint32_t utils_itoa( int32_t n, uint8_t* s, uint32_t s_max )
 
     return i;
 }
+
+int32_t utils_memcmp( const void *p1, const void *p2, uint32_t len )
+{
+    const uint8_t* cp1;
+    const uint8_t* cp2;
+    int32_t        ret = -1;
+
+    if (( NULL != p1 ) && ( NULL != p2 ))
+    {
+        cp1 = (const uint8_t*) p1;
+        cp2 = (const uint8_t*) p2;
+
+        ret = 0;
+
+        while ( len > 0 )
+        {
+            len--;
+
+            if ( *cp1 != *cp2 )
+            {
+                ret = ((int32_t) *cp1 - (int32_t) *cp2 );
+                break;
+            }
+
+            cp1++;
+            cp2++;
+        }
+    }
+
+    return ret;
+}
+
+void utils_memset( void* dest, uint8_t val, uint32_t len )
+{
+    uint32_t i;
+    uint8_t* ptr;
+
+    if ( NULL != dest )
+    {
+        ptr = (uint8_t*) dest;
+
+        for ( i = 0; i < len; i++ )
+        {
+            ptr[i] = val;
+        }
+    }
+}

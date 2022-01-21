@@ -11,6 +11,11 @@
 
 #include "flash.h"
 
+static uint32_t flash_get_page( uint32_t addr )
+{
+    return (( addr - FLASH_BASE ) / FLASH_PAGE_SIZE );
+}
+
 status_t flash_read( void* buff, uint32_t size, uint32_t offset )
 {
     status_t ret      = STATUS_ERROR;
@@ -36,32 +41,29 @@ status_t flash_read( void* buff, uint32_t size, uint32_t offset )
 
 status_t flash_write( void* buff, uint32_t size, uint32_t offset )
 {
-    status_t               ret   = STATUS_OK;
-    HAL_StatusTypeDef      hret  = HAL_ERROR;
-    FLASH_EraseInitTypeDef erase = {0};
-    uint32_t               page_error;
+    status_t               ret        = STATUS_OK;
+    HAL_StatusTypeDef      hret       = HAL_ERROR;
+    FLASH_EraseInitTypeDef erase      = {0};
+    uint32_t               page_error = 0;
     uint32_t               i   = 0;
-    uint32_t*              ptr = (uint32_t*) buff;
+    uint64_t*              ptr = (uint64_t*) buff;
 
-    erase.TypeErase   = FLASH_TYPEERASE_PAGES;
-    erase.PageAddress = FLASH_USER_PAGE_ADDR;
-    erase.NbPages     = 1;
+    erase.TypeErase = FLASH_TYPEERASE_PAGES;
+    erase.Page      = flash_get_page( FLASH_USER_PAGE_ADDR );
+    erase.NbPages   = 1;
 
     if ( NULL != buff )
     {
         HAL_FLASH_Unlock();
 
-        /* Erase the user page */
-        erase.PageAddress = FLASH_USER_PAGE_ADDR;
-
         hret = HAL_FLASHEx_Erase( &erase, &page_error );
 
         if (( HAL_OK == hret ) && ( FLASH_PAGE_ERASE_OK == page_error ))
         {
-            for ( i = 0; i < size; i += 4 )
+            for ( i = 0; i < size; i += 8 )
             {
                 hret |= HAL_FLASH_Program
-                            ( FLASH_TYPEPROGRAM_WORD
+                            ( FLASH_TYPEPROGRAM_DOUBLEWORD
                             , FLASH_USER_PAGE_ADDR + i
                             , *ptr
                             );
@@ -84,16 +86,14 @@ status_t flash_erase( void )
 {
     status_t               ret  = STATUS_OK;
     HAL_StatusTypeDef      hret;
-    FLASH_EraseInitTypeDef erase = {0};
-    uint32_t               page_error;
+    FLASH_EraseInitTypeDef erase      = {0};
+    uint32_t               page_error = 0;
 
-    erase.TypeErase   = FLASH_TYPEERASE_PAGES;
-    erase.PageAddress = FLASH_USER_PAGE_ADDR;
-    erase.NbPages     = 1;
+    erase.TypeErase = FLASH_TYPEERASE_PAGES;
+    erase.Page      = flash_get_page( FLASH_USER_PAGE_ADDR );
+    erase.NbPages   = 1;
 
     HAL_FLASH_Unlock();
-
-    erase.PageAddress = FLASH_USER_PAGE_ADDR;
 
     hret = HAL_FLASHEx_Erase( &erase, &page_error );
 

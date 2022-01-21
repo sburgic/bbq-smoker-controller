@@ -18,5 +18,7 @@ uint8_t* utils_float_to_char( float val, uint8_t* out );
 float utils_float_cels_to_fahr( float celsius );
 void utils_reverse( uint8_t* s, uint32_t s_len );
 uint32_t utils_itoa( int32_t n, uint8_t* s, uint32_t s_max );
+int32_t utils_memcmp( const void *p1, const void *p2, uint32_t len );
+void utils_memset( void* dest, uint8_t val, uint32_t len );
 
 #endif /* __UTILS_H__ */
