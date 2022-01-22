@@ -35,7 +35,10 @@ typedef struct
 
 typedef enum
 {
-    MENU_PAGE_MAIN = 0,
+    MENU_PAGE_MAIN              = 0,
+    MENU_PAGE_SET_TEMPERATURE   = 1,
+    MENU_PAGE_CHANGE_STATE      = 2,
+    MENU_PAGE_SAVE_TO_FLASH     = 3
 } menu_page_idx_t;
 
 void menu_open( void );

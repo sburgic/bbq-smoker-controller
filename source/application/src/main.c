@@ -70,30 +70,30 @@ static void disp_print_fan_load( uint8_t load )
 static void disp_print_temperature( Max31850_Hdl_t max, uint16_t idx )
 {
     uint8_t i      = 0;
-    uint8_t x_axis = 2;
+    uint8_t y_axis = 2;
     float   fahrenheit;
 
     max31850_temp_to_string( lcd_buff, max->last_temp_raw[idx] );
 
     if ( 1 == idx )
     {
-        i += lcd_puts_xy((uint8_t*) "TS:", 0, x_axis );
+        i += lcd_puts_xy((uint8_t*) "TS:", 0, y_axis );
     }
     else
     {
-        x_axis = 3;
-        i += lcd_puts_xy((uint8_t*) "TM:", 0, x_axis );
+        y_axis = 3;
+        i += lcd_puts_xy((uint8_t*) "TM:", 0, y_axis );
     }
 
-     i += lcd_puts_xy( lcd_buff, i, x_axis );
-     i += lcd_puts_xy((uint8_t*) "C/", i, x_axis );
+     i += lcd_puts_xy( lcd_buff, i, y_axis );
+     i += lcd_puts_xy((uint8_t*) "C/", i, y_axis );
 
     fahrenheit = utils_float_cels_to_fahr
                             ((float)((float) max->last_temp_raw[idx] / 16.0 ));
 
     utils_float_to_char( fahrenheit, lcd_buff );
-    i += lcd_puts_xy( lcd_buff, i, x_axis );
-    lcd_puts_xy((uint8_t*) "F", i, x_axis );
+    i += lcd_puts_xy( lcd_buff, i, y_axis );
+    lcd_puts_xy((uint8_t*) "F", i, y_axis );
 }
 
 static void disp_print_state( s_ctrl_state_t state )

@@ -20,7 +20,7 @@ static config_t cfg_data =
     .tm_phase_1 = 60,
     .ts_phase_2 = 250,
     .tm_phase_2 = 180,
-    .bt_name    = "BBQSmokerDangerZoneBL",
+    .bt_name    = "BBQ-DangerZoneBL\0",
     .bt_pin     = { 0, 6, 6, 6 },
     .magic      = 0xDEADBEEF
 };
@@ -43,6 +43,15 @@ status_t config_init( void )
             ret = flash_read((uint8_t*) &cfg_data, sizeof(config_t), 0 );
         }
     }
+
+    return ret;
+}
+
+status_t config_store( void )
+{
+    status_t ret;
+
+    ret = flash_write((uint8_t*) &cfg_data, sizeof(config_t), 0 );
 
     return ret;
 }
