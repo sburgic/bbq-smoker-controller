@@ -93,7 +93,25 @@ int16_t utils_int_cels_to_fahr( int16_t celsius )
 {
     int16_t ret;
 
-    ret = (( celsius * ( 18 / 10 )) + 32 );
+    ret = ((( celsius * 18 ) / 10 ) + 32 );
+
+    return ret;
+}
+
+float utils_float_fahr_to_celsius( float fahrenheit )
+{
+    float ret;
+
+    ret = (( fahrenheit - 32.0 ) / 1.8 );
+
+    return ret;
+}
+
+int16_t utils_int_fahr_to_celsius( int16_t fahrenheit )
+{
+    int16_t ret;
+
+    ret = ((( fahrenheit - 32 ) / 18 ) * 10 );
 
     return ret;
 }
@@ -156,6 +174,19 @@ uint32_t utils_itoa( int32_t n, uint8_t* s, uint32_t s_max )
     return i;
 }
 
+int16_t utils_atoi( uint8_t* str )
+{
+    int16_t res = 0;
+    uint8_t i;
+
+    for ( i = 0; '\0' != str[i] && (( str[i] >= 48 ) && ( str[i] <= 57 )); i++ )
+    {
+        res = ( res * 10 + ( str[i] - '0' ));
+    }
+
+    return res;
+}
+
 int32_t utils_memcmp( const void *p1, const void *p2, uint32_t len )
 {
     const uint8_t* cp1;
@@ -201,4 +232,68 @@ void utils_memset( void* dest, uint8_t val, uint32_t len )
             ptr[i] = val;
         }
     }
+}
+
+uint16_t utils_strnlen( const uint8_t* s, uint16_t len )
+{
+    uint16_t i;
+
+    for ( i = (uint16_t)0; (i < len)&&(*s); i++, s++ )
+    {
+    }
+    ;
+
+    return ( i );
+}
+
+int16_t utils_strcmp( uint8_t* s1, uint8_t* s2, uint16_t len )
+{
+    int16_t retval = (int16_t)0;
+
+    if (( NULL != s1 ) && ( NULL != s2 ))
+    {
+        while( len )
+        {
+            len--;
+            if (( *s1 != *s2 ) || ( 0 == *s1 ) || ( 0 == *s2 ))
+            {
+                retval = (int16_t)( *s1 - *s2 );
+                break;
+            }
+            s1++;
+            s2++;
+        }
+    }
+
+    return retval;
+}
+
+void utils_memcpy( uint8_t* dest, uint8_t* src, uint16_t len )
+{
+    uint16_t i;
+
+    if (( NULL != dest ) && ( NULL != src ))
+    {
+        for ( i = 0; i < len; i++ )
+        {
+            dest[i] = src[i];
+        }
+    }
+}
+
+int16_t utils_find_char( uint8_t* str, uint16_t len, uint8_t ch )
+{
+    int16_t  ret = -1;
+    uint16_t i;
+
+    for ( i = 0; i < len; i++ )
+    {
+        if ( str[i] == ch )
+        {
+            ret = i;
+            break;
+        }
+    }
+
+    return ret;
 }

@@ -38,7 +38,7 @@ static void menu_main_start_cb( void );
 static void menu_main_get_temperatures_cb( void );
 static void menu_main_set_temperatures_cb( void );
 static void menu_main_change_state_cb( void );
-static void menu_main_fan_settings_cb( void );
+static void menu_main_fan_test_cb( void );
 static void menu_main_bt_info_cb( void );
 static void menu_main_save_to_flash_cb( void );
 static void menu_main_exit_cb( void );
@@ -47,8 +47,7 @@ static void menu_main_exit_cb( void );
  * Set temperature page menu callbacks.
  */
 
-static void menu_set_temp_ts1_cb( void );
-static void menu_set_temp_ts2_cb( void );
+static void menu_set_temp_ts_cb( void );
 static void menu_set_temp_tm1_cb( void );
 static void menu_set_temp_tm2_cb( void );
 static void menu_set_temp_back_cb( void );
@@ -75,7 +74,7 @@ static menu_entry_t menu_page_main[] =
     { (uint8_t*) "Get temperatures", menu_main_get_temperatures_cb },
     { (uint8_t*) "Set temperatures", menu_main_set_temperatures_cb },
     { (uint8_t*) "Change state", menu_main_change_state_cb },
-    { (uint8_t*) "Fan settings", menu_main_fan_settings_cb },
+    { (uint8_t*) "Fan test", menu_main_fan_test_cb },
     { (uint8_t*) "Bluetooth info", menu_main_bt_info_cb },
     { (uint8_t*) "Save to flash", menu_main_save_to_flash_cb },
     { (uint8_t*) "Exit menu", menu_main_exit_cb }
@@ -83,8 +82,7 @@ static menu_entry_t menu_page_main[] =
 
 static menu_entry_t menu_page_set_temperatures[] =
 {
-    { (uint8_t*) "Smoke temp. phase 1", menu_set_temp_ts1_cb },
-    { (uint8_t*) "Smoke temp. phase 2", menu_set_temp_ts2_cb },
+    { (uint8_t*) "Smoke temp.", menu_set_temp_ts_cb },
     { (uint8_t*) "Meat  temp. phase 1", menu_set_temp_tm1_cb },
     { (uint8_t*) "Meat  temp. phase 2", menu_set_temp_tm2_cb },
     { (uint8_t*) "Back", menu_set_temp_back_cb }
@@ -149,7 +147,7 @@ static void menu_dump_temperature( bool_t  clear
     int16_t temp;
     uint8_t buff[3] = {0};
     uint8_t i;
-    float   fahrenheit;
+    int16_t fahrenheit;
 
     if ( FALSE != clear )
     {
@@ -160,13 +158,9 @@ static void menu_dump_temperature( bool_t  clear
     {
         if ( 0 == idx )
         {
-            lcd_puts_xy((uint8_t*) "TS1:", 0, row );
+            lcd_puts_xy((uint8_t*) "TS:", 0, row );
         }
         else if ( 1 == idx )
-        {
-            lcd_puts_xy((uint8_t*) "TS2:", 0, row );
-        }
-        else if ( 2 == idx )
         {
             lcd_puts_xy((uint8_t*) "TM1:", 0, row );
         }
@@ -178,13 +172,9 @@ static void menu_dump_temperature( bool_t  clear
 
     if ( 0 == idx )
     {
-        temp = cfg->ts_phase_1;
+        temp = cfg->ts;
     }
     else if ( 1 == idx )
-    {
-        temp = cfg->ts_phase_2;
-    }
-    else if ( 2 == idx )
     {
         temp = cfg->tm_phase_1;
     }
@@ -195,11 +185,11 @@ static void menu_dump_temperature( bool_t  clear
 
     i = 4;
 
-    utils_itoa((uint32_t) temp, buff, 3 );
+    utils_itoa( temp, buff, 3 );
     i += lcd_puts_xy( buff, i, row );
     i += lcd_puts_xy((uint8_t*) "C/", i, row );
-    fahrenheit = utils_float_cels_to_fahr((float) temp );
-    utils_itoa((uint32_t) fahrenheit, buff, 3 );
+    fahrenheit = utils_int_cels_to_fahr( temp );
+    utils_itoa( fahrenheit, buff, 3 );
     i += lcd_puts_xy( buff, i, row );
     lcd_puts_xy((uint8_t*) "F ", i, row );
 }
@@ -213,7 +203,7 @@ static void menu_dump_all_temperatures( bool_t clear, bool_t names )
         lcd_clear();
     }
 
-    for ( i = 0; i < 4; i++ )
+    for ( i = 0; i < 3; i++ )
     {
         menu_dump_temperature( FALSE, TRUE, i, i );
     }
@@ -247,8 +237,57 @@ static void menu_main_change_state_cb( void )
     menu_change_active_page( MENU_PAGE_CHANGE_STATE );
 }
 
-static void menu_main_fan_settings_cb( void )
+static void menu_main_fan_test_cb( void )
 {
+    uint8_t fan_load = 0;
+    uint8_t buff[3]  = {0};
+    uint8_t i        = 9;
+
+    lcd_clear();
+    lcd_puts_xy((uint8_t*) "Fan load:", 0, 0 );
+    fan_start();
+
+    /* Force to print the initial value (0). */
+    enc->updated   = TRUE;
+    enc->direction = ENC_DIRECTION_LEFT;
+
+    do
+    {
+        if ( FALSE != enc->updated )
+        {
+            if ( ENC_DIRECTION_RIGHT == enc->direction )
+            {
+                if ( fan_load < 100 )
+                {
+                    fan_load += 1;
+                }
+            }
+            else
+            {
+                if ( fan_load > 0 )
+                {
+                    fan_load -= 1;
+                }
+            }
+
+            fan_set_pwm( fan_load );
+
+            /* Verify entry. */
+            fan_load = fan_get_pwm();
+
+            utils_itoa( fan_load, &buff[0], 3 );
+            i += lcd_puts_xy( buff, i, 0 );
+            lcd_puts_xy((uint8_t*) "% ", i, 0 );
+
+            enc->updated = FALSE;
+            i = 9;
+        }
+
+    } while ( FALSE == enc->pb_pressed );
+
+    enc->pb_pressed = FALSE;
+
+    fan_set_pwm( 0 );
 }
 
 static void menu_main_bt_info_cb( void )
@@ -285,7 +324,7 @@ static void menu_main_exit_cb( void )
     menu_done = TRUE;
 }
 
-static void menu_set_temp_ts1_cb( void )
+static void menu_set_temp_ts_cb( void )
 {
     menu_dump_temperature( TRUE, TRUE, 0, 0 );
 
@@ -295,16 +334,16 @@ static void menu_set_temp_ts1_cb( void )
         {
             if ( ENC_DIRECTION_RIGHT == enc->direction )
             {
-                if ( cfg->ts_phase_1 < 400 )
+                if ( cfg->ts < 400 )
                 {
-                    cfg->ts_phase_1++;
+                    cfg->ts++;
                 }
             }
             else
             {
-                if ( cfg->ts_phase_1 > 40 )
+                if ( cfg->ts > 40 )
                 {
-                    cfg->ts_phase_1--;
+                    cfg->ts--;
                 }
             }
 
@@ -317,42 +356,9 @@ static void menu_set_temp_ts1_cb( void )
     enc->pb_pressed = FALSE;
 }
 
-static void menu_set_temp_ts2_cb( void )
-{
-    menu_dump_temperature( TRUE, TRUE, 1, 0 );
-
-    do
-    {
-        if ( FALSE != enc->updated )
-        {
-            if ( ENC_DIRECTION_RIGHT == enc->direction )
-            {
-                if ( cfg->ts_phase_2 < 400 )
-                {
-                    cfg->ts_phase_2++;
-                }
-            }
-            else
-            {
-                if ( cfg->ts_phase_2 > 40 )
-                {
-                    cfg->ts_phase_2--;
-                }
-            }
-
-            menu_dump_temperature( FALSE, FALSE, 1, 0 );
-
-            enc->updated = FALSE;
-        }
-    } while ( FALSE == enc->pb_pressed );
-
-    enc->pb_pressed = FALSE;
-}
-
-
 static void menu_set_temp_tm1_cb( void )
 {
-    menu_dump_temperature( TRUE, TRUE, 2, 0 );
+    menu_dump_temperature( TRUE, TRUE, 1, 0 );
 
     do
     {
@@ -373,7 +379,7 @@ static void menu_set_temp_tm1_cb( void )
                 }
             }
 
-            menu_dump_temperature( FALSE, FALSE, 2, 0 );
+            menu_dump_temperature( FALSE, FALSE, 1, 0 );
 
             enc->updated = FALSE;
         }
@@ -385,7 +391,7 @@ static void menu_set_temp_tm1_cb( void )
 
 static void menu_set_temp_tm2_cb( void )
 {
-    menu_dump_temperature( TRUE, TRUE, 3, 0 );
+    menu_dump_temperature( TRUE, TRUE, 2, 0 );
 
     do
     {
@@ -406,7 +412,7 @@ static void menu_set_temp_tm2_cb( void )
                 }
             }
 
-            menu_dump_temperature( FALSE, FALSE, 3, 0 );
+            menu_dump_temperature( FALSE, FALSE, 2, 0 );
 
             enc->updated = FALSE;
         }

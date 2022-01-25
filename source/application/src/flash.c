@@ -11,6 +11,8 @@
 
 #include "flash.h"
 
+#include <stm32g0xx_hal.h>
+
 static uint32_t flash_get_page( uint32_t addr )
 {
     return (( addr - FLASH_BASE ) / FLASH_PAGE_SIZE );

@@ -14,8 +14,6 @@
 
 #include "ptypes.h"
 
-#include <stm32g0xx_hal.h>
-
 #define FLASH_ADDR_PAGE_31   ((uint32_t)0x08007C00)
 #define FLASH_USER_PAGE_ADDR FLASH_ADDR_PAGE_31
 #define FLASH_PAGE_ERASE_OK  (uint32_t)(0xFFFFFFFF)

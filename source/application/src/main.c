@@ -11,6 +11,7 @@
 
 #include "main.h"
 
+#include "bluetooth.h"
 #include "buzzer.h"
 #include "configuration.h"
 #include "encoder.h"
@@ -85,15 +86,22 @@ static void disp_print_temperature( Max31850_Hdl_t max, uint16_t idx )
         i += lcd_puts_xy((uint8_t*) "TM:", 0, y_axis );
     }
 
-     i += lcd_puts_xy( lcd_buff, i, y_axis );
-     i += lcd_puts_xy((uint8_t*) "C/", i, y_axis );
+    if ( MAX31850_SENSOR_ERROR != max->last_temp_raw[idx] )
+    {
+        i += lcd_puts_xy( lcd_buff, i, y_axis );
+        i += lcd_puts_xy((uint8_t*) "C/", i, y_axis );
 
-    fahrenheit = utils_float_cels_to_fahr
+        fahrenheit = utils_float_cels_to_fahr
                             ((float)((float) max->last_temp_raw[idx] / 16.0 ));
 
-    utils_float_to_char( fahrenheit, lcd_buff );
-    i += lcd_puts_xy( lcd_buff, i, y_axis );
-    lcd_puts_xy((uint8_t*) "F", i, y_axis );
+        utils_float_to_char( fahrenheit, lcd_buff );
+        i += lcd_puts_xy( lcd_buff, i, y_axis );
+        lcd_puts_xy_cl((uint8_t*) "F", i, y_axis );
+    }
+    else
+    {
+        lcd_puts_xy_cl((uint8_t*) "Error!", i, y_axis );
+    }
 }
 
 static void disp_print_state( s_ctrl_state_t state )
@@ -145,7 +153,7 @@ int main( void )
     Max31850_Hdl_t max_hdl = NULL;
     uint16_t       tm_idx;
     uint16_t       ts_idx;
-    uint8_t        fan_load     = 0;
+    uint8_t        fan_pwm     = 0;
     s_ctrl_state_t s_ctrl_state = S_CTRL_STATE_IDLE;
 
     HAL_Init();
@@ -160,7 +168,6 @@ int main( void )
     lcd_puts_xy( APP_WELCOME_TEXT_3, 1, 2 );
     lcd_puts_xy( APP_SW_VERSION, 4, 3 );
     bsp_wait( 2, BSP_TIME_SEC );
-    lcd_clear();
 
     enc_hdl = enc_get_hdl();
     {
@@ -179,6 +186,7 @@ int main( void )
     ret = vmon_init();
     if ( STATUS_OK != ret )
     {
+        lcd_clear();
         lcd_puts_xy((uint8_t*) "VMON error!", 0, 0 );
         bsp_wait( 1, BSP_TIME_SEC );
     }
@@ -206,6 +214,7 @@ int main( void )
         if (( MAX31850_SENSOR_ERROR == ts_idx )
          || ( MAX31850_SENSOR_ERROR == tm_idx ))
          {
+            lcd_clear();
             lcd_puts_xy((uint8_t*) "MAX31850 error!", 0, 0 );
             bsp_wait( 1, BSP_TIME_SEC );
             critical_error_handler();
@@ -215,12 +224,23 @@ int main( void )
     ret = config_init();
     if ( STATUS_OK != ret )
     {
+        lcd_clear();
         lcd_puts_xy((uint8_t*) "Config error!", 0, 0 );
         lcd_puts_xy((uint8_t*) "Using defaults!", 0, 1 );
         bsp_wait( 1, BSP_TIME_SEC );
     }
 
+    ret = bt_init();
+    if ( STATUS_OK != ret )
+    {
+        lcd_clear();
+        lcd_puts_xy((uint8_t*) "Bluetooth error!", 0, 0 );
+        bsp_wait( 1, BSP_TIME_SEC );
+    }
+
     fan_init();
+    fan_set_pwm( fan_pwm );
+    fan_start();
     lcd_clear();
 
     /* Reset encoder button if pressed during the startup. */
@@ -256,7 +276,8 @@ int main( void )
                 }
             }
 
-            disp_print_fan_load( fan_load );
+            fan_pwm = fan_get_pwm();
+            disp_print_fan_load( fan_pwm );
         }
 
         bret = max31850_update();
@@ -276,6 +297,9 @@ int main( void )
         if (( S_CTRL_STATE_PREHEAT_DONE == s_ctrl_state )
          || ( S_CTRL_STATE_HEAD_DONE == s_ctrl_state ))
         {
+            fan_pwm = 0;
+            fan_set_pwm( fan_pwm );
+
             signal_alarm( s_ctrl_state );
 
             while ( FALSE == enc_hdl->pb_pressed );
@@ -291,8 +315,18 @@ int main( void )
                 state_set( S_CTRL_STATE_IDLE );
             }
         }
+        else if ( S_CTRL_STATE_IDLE == s_ctrl_state )
+        {
+            fan_pwm = 0;
+            fan_set_pwm( fan_pwm );
+        }
+        else
+        {
+
+        }
 
         disp_print_state( s_ctrl_state );
+        bt_task();
     }
 
 #ifndef __ICCARM__

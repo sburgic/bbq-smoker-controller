@@ -15,6 +15,8 @@
 #include "encoder.h"
 #include "time.h"
 
+#include <uart.h>
+
 #include <stm32g0xx_hal.h>
 
 void NMI_Handler( void )

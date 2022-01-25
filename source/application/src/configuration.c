@@ -16,12 +16,11 @@
 
 static config_t cfg_data =
 {
-    .ts_phase_1 = 120,
-    .tm_phase_1 = 60,
-    .ts_phase_2 = 250,
-    .tm_phase_2 = 180,
-    .bt_name    = "BBQ-DangerZoneBL\0",
-    .bt_pin     = { 0, 6, 6, 6 },
+    .ts         = 122,
+    .tm_phase_1 = 77,
+    .tm_phase_2 = 94,
+    .bt_name    = "DangerZoneBL\0",
+    .bt_pin     = { 6, 6, 6, 6, 6, 6 },
     .magic      = 0xDEADBEEF
 };
 

@@ -46,7 +46,8 @@ STM_HAL_LIB_SRC_LIST := stm32g0xx_hal.c \
                         stm32g0xx_hal_rcc.c \
                         stm32g0xx_hal_rcc_ex.c \
                         stm32g0xx_hal_tim.c \
-                        stm32g0xx_hal_tim_ex.c
+                        stm32g0xx_hal_tim_ex.c \
+                        stm32g0xx_hal_uart.c
 
 # Application source file directories
 APP_SRC_DIR := $(PROJECT_ROOT_DIR)/source/application/src
@@ -56,17 +57,21 @@ APP_INC_DIR := $(PROJECT_ROOT_DIR)/source/application/include \
                $(STM_HAL_INC_DIR) \
                $(LIBS_ROOT_DIR) \
                $(LIBS_ROOT_DIR)/lcd2wire/include \
-               $(LIBS_ROOT_DIR)/one_wire/include
+               $(LIBS_ROOT_DIR)/one_wire/include \
+               $(LIBS_ROOT_DIR)/buffer/include \
+               $(LIBS_ROOT_DIR)/uart/include
 
 #
 # List of application source files to be compiled
 #
 
-APP_SRC_LIST += buzzer.c \
+APP_SRC_LIST += bluetooth.c \
+                buzzer.c \
                 configuration.c \
                 encoder.c \
                 fan.c \
                 flash.c \
+                hal_msp.c \
                 interrupt.c \
                 main.c \
                 menu.c \

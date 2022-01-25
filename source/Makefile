@@ -108,9 +108,11 @@ LIBS_ROOT_DIR := $(PROJECT_ROOT_DIR)/../libs
 
 LCD2WIRE_LIB_ROOT ?= $(LIBS_ROOT_DIR)/lcd2wire
 ONE_WIRE_LIB_ROOT ?= $(LIBS_ROOT_DIR)/one_wire
+UART_LIB_ROOT     ?= $(LIBS_ROOT_DIR)/uart
 
 include $(LCD2WIRE_LIB_ROOT)/lcd2wire.mk
 include $(ONE_WIRE_LIB_ROOT)/one_wire.mk
+include $(UART_LIB_ROOT)/uart.mk
 
 # Create library include flags
 CC_LIBS_DIR += $(STM_HAL_LIB_OUT_DIR)

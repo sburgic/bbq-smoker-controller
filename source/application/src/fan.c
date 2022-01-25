@@ -13,22 +13,10 @@
 
 #include <stm32g0xx_hal.h>
 
-/*
- * TIM1 Channel1 duty cycle = (TIM1_CCR1/ TIM1_ARR + 1)* 100 = 50%.
- * To get TIM1 counter clock at SystemCoreClock, the prescaler is set to 0.
- * To get TIM1 output clock at 24 KHz, the period (ARR)) is computed as follows:
- *
- *     ARR = (TIM1 counter clock / TIM1 output clock) - 1
- *         = 332
- *
- * TIM1 Channel1 duty cycle = (TIM1_CCR1/ TIM1_ARR + 1)* 100 = 50%
- */
+/* TIM1 Channel1 duty cycle = (TIM1_CCR1 / (TIM1_ARR + 1)) * 100 = 50%. */
+#define PERIOD_VALUE (uint32_t)( 400 - 1 )
 
-#define PRESCALER_VALUE (uint32_t)(((SystemCoreClock) / 64000000) - 1)
-#define PERIOD_VALUE    (uint32_t)( 333 - 1 )
-#define PULSE1_VALUE    (uint32_t)( PERIOD_VALUE/2 )
-
-TIM_HandleTypeDef tim1;
+static TIM_HandleTypeDef tim1;
 
 status_t fan_init( void )
 {
@@ -41,7 +29,7 @@ status_t fan_init( void )
     GPIO_InitTypeDef               gpio       = {0};
 
     tim1.Instance               = TIM1;
-    tim1.Init.Prescaler         = PRESCALER_VALUE;
+    tim1.Init.Prescaler         = 7;
     tim1.Init.CounterMode       = TIM_COUNTERMODE_UP;
     tim1.Init.Period            = PERIOD_VALUE;
     tim1.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
@@ -62,9 +50,9 @@ status_t fan_init( void )
     if ( HAL_OK == hret )
     {
         oc_cfg.OCMode       = TIM_OCMODE_PWM1;
-        oc_cfg.Pulse        = PULSE1_VALUE;
+        oc_cfg.Pulse        = 0;
         oc_cfg.OCPolarity   = TIM_OCPOLARITY_HIGH;
-        oc_cfg.OCNPolarity  = TIM_OCNPOLARITY_HIGH;
+        oc_cfg.OCNPolarity  = TIM_OCPOLARITY_HIGH;
         oc_cfg.OCFastMode   = TIM_OCFAST_DISABLE;
         oc_cfg.OCIdleState  = TIM_OCIDLESTATE_RESET;
         oc_cfg.OCNIdleState = TIM_OCNIDLESTATE_RESET;
@@ -128,13 +116,26 @@ void fan_stop( void )
     HAL_TIM_PWM_Stop( &tim1, TIM_CHANNEL_1 );
 }
 
-void fan_set_load( uint8_t load )
+void fan_set_pwm( uint8_t pwm )
 {
-
+    if ( pwm > 100 )
+    {
+        tim1.Instance->CCR1 = 400;
+    }
+    else
+    {
+        tim1.Instance->CCR1 = ( pwm << 2 ); /* Multiply by 4. */
+    }
 }
 
-/* This function is implemented here on purpose!!
- * It is inkoved by HAL_TIM_PWM_Init()
+uint8_t fan_get_pwm( void )
+{
+    return (uint8_t) ( tim1.Instance->CCR1 >> 2 ); /* Divide by 4. */
+}
+
+/*
+ * This function is implemented here on purpose!!
+ * It is inkoved by HAL_TIM_PWM_Init().
  */
 void HAL_TIM_PWM_MspInit( TIM_HandleTypeDef* tim )
 {
