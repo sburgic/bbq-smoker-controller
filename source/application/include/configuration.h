@@ -19,17 +19,21 @@
 
 typedef struct
 {
-    int16_t  ts;
-    int16_t  tm_phase_1;
-    int16_t  tm_phase_2;
-    uint8_t  bt_name[CONFIG_BT_NAME_SIZE + 1]; /* String termination. */
-    uint8_t  bt_pin[CONFIG_BT_PIN_SIZE];
-    uint32_t magic;
-    uint8_t  reserved[3];
+    int16_t   ts;
+    int16_t   tm_phase_1;
+    int16_t   tm_phase_2;
+    uint8_t   bt_name[CONFIG_BT_NAME_SIZE + 1]; /* String termination. */
+    uint8_t   bt_pin[CONFIG_BT_PIN_SIZE];
+    float     pid_kp;
+    float     pid_ki;
+    float     pid_kd;
+    uint8_t   reserved[7];
+    uint32_t  magic;
 } config_t;
 
 status_t config_init( void );
 status_t config_store( void );
+status_t config_restore_fact_defaults( void );
 config_t* config_get_hdl( void );
 
 #endif /* __CONFIGURATION_H__ */

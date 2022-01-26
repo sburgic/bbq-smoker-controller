@@ -15,6 +15,7 @@
 #include "encoder.h"
 #include "fan.h"
 #include "flash.h"
+#include "pid.h"
 #include "state.h"
 #include "time.h"
 #include "utils.h"
@@ -38,10 +39,12 @@ static void menu_main_start_cb( void );
 static void menu_main_get_temperatures_cb( void );
 static void menu_main_set_temperatures_cb( void );
 static void menu_main_change_state_cb( void );
+static void menu_main_pid_settings_cb( void );
 static void menu_main_fan_test_cb( void );
 static void menu_main_bt_info_cb( void );
 static void menu_main_save_to_flash_cb( void );
 static void menu_main_exit_cb( void );
+static void menu_main_load_factory_def_cb( void );
 
 /*
  * Set temperature page menu callbacks.
@@ -62,11 +65,27 @@ static void menu_ch_state_heat_cb( void );
 static void menu_ch_state_back_cb( void );
 
 /*
+ * PID settings page menu callbacks.
+ */
+
+static void menu_pid_settings_kp_cb( void );
+static void menu_pid_settings_ki_cb( void );
+static void menu_pid_settings_kd_cb( void );
+static void menu_pid_settings_back_cb( void );
+
+/*
  * Save to flash page menu callbacks.
  */
 
 static void menu_main_save_to_flash_yes_cb( void );
 static void menu_main_save_to_flash_no_cb( void );
+
+/*
+ * Restore factory defaults page menu callbacks.
+ */
+
+static void menu_main_restore_factory_def_yes_cb( void );
+static void menu_main_restore_factory_def_no_cb( void );
 
 static menu_entry_t menu_page_main[] =
 {
@@ -74,9 +93,11 @@ static menu_entry_t menu_page_main[] =
     { (uint8_t*) "Get temperatures", menu_main_get_temperatures_cb },
     { (uint8_t*) "Set temperatures", menu_main_set_temperatures_cb },
     { (uint8_t*) "Change state", menu_main_change_state_cb },
+    { (uint8_t*) "PID settings", menu_main_pid_settings_cb },
     { (uint8_t*) "Fan test", menu_main_fan_test_cb },
     { (uint8_t*) "Bluetooth info", menu_main_bt_info_cb },
     { (uint8_t*) "Save to flash", menu_main_save_to_flash_cb },
+    { (uint8_t*) "Load factory def.", menu_main_load_factory_def_cb },
     { (uint8_t*) "Exit menu", menu_main_exit_cb }
 };
 
@@ -96,10 +117,24 @@ static menu_entry_t menu_page_change_state[] =
     { (uint8_t*) "Back", menu_ch_state_back_cb }
 };
 
+static menu_entry_t menu_page_pid_settings[] =
+{
+    { (uint8_t*) "Kp(Proportional)", menu_pid_settings_kp_cb },
+    { (uint8_t*) "Ki(Integral)", menu_pid_settings_ki_cb },
+    { (uint8_t*) "Kd(Derivative)", menu_pid_settings_kd_cb },
+    { (uint8_t*) "Back", menu_pid_settings_back_cb }
+};
+
 static menu_entry_t menu_page_save_to_flash[] =
 {
     { (uint8_t*) "Yes", menu_main_save_to_flash_yes_cb },
     { (uint8_t*) "No", menu_main_save_to_flash_no_cb }
+};
+
+static menu_entry_t menu_page_restore_factory_def[] =
+{
+    { (uint8_t*) "Yes", menu_main_restore_factory_def_yes_cb },
+    { (uint8_t*) "No", menu_main_restore_factory_def_no_cb }
 };
 
 static menu_page_t menu_page[] =
@@ -123,10 +158,22 @@ static menu_page_t menu_page[] =
         sizeof(menu_page_change_state[0])
     },
     {
+        &menu_page_pid_settings[0],
+        0,
+        sizeof(menu_page_pid_settings) /
+        sizeof(menu_page_pid_settings[0])
+    },
+    {
         &menu_page_save_to_flash[0],
         0,
         sizeof(menu_page_save_to_flash) /
         sizeof(menu_page_save_to_flash[0])
+    },
+    {
+        &menu_page_restore_factory_def[0],
+        0,
+        sizeof(menu_page_restore_factory_def) /
+        sizeof(menu_page_restore_factory_def[0])
     }
 };
 
@@ -237,6 +284,11 @@ static void menu_main_change_state_cb( void )
     menu_change_active_page( MENU_PAGE_CHANGE_STATE );
 }
 
+static void menu_main_pid_settings_cb( void )
+{
+    menu_change_active_page( MENU_PAGE_PID_SETTINGS );
+}
+
 static void menu_main_fan_test_cb( void )
 {
     uint8_t fan_pwm_percent = 0;
@@ -317,6 +369,11 @@ static void menu_main_bt_info_cb( void )
 static void menu_main_save_to_flash_cb( void )
 {
     menu_change_active_page( MENU_PAGE_SAVE_TO_FLASH );
+}
+
+static void menu_main_load_factory_def_cb( void )
+{
+    menu_change_active_page( MENU_PAGE_RESTORE_FACTORY_DEF );
 }
 
 static void menu_main_exit_cb( void )
@@ -483,6 +540,230 @@ static void menu_main_save_to_flash_yes_cb( void )
 static void menu_main_save_to_flash_no_cb( void )
 {
     menu_page[MENU_PAGE_SAVE_TO_FLASH].curr_pos = 0;
+    menu_change_active_page( MENU_PAGE_MAIN );
+}
+
+static void menu_pid_settings_kp_cb( void )
+{
+    config_t* cfg;
+    uint8_t   buff[4] = {0};
+    int32_t   set;
+
+    lcd_clear();
+
+    /* Assume always valid pointer. */
+    cfg = config_get_hdl();
+
+    lcd_puts_xy((uint8_t*) "Kp:", 0, 0 );
+    set = (int32_t) cfg->pid_kp;
+
+    /*
+     * Force printing of the value first time.
+     */
+
+    enc->updated   = TRUE;
+    enc->direction = ENC_DIRECTION_NONE;
+
+    do
+    {
+        if ( FALSE != enc->updated )
+        {
+            if ( ENC_DIRECTION_RIGHT == enc->direction )
+            {
+                if ( set < 1000 )
+                {
+                    set += 1;
+                }
+            }
+            else if ( ENC_DIRECTION_LEFT == enc->direction )
+            {
+                if ( set > 0 )
+                {
+                    set -= 1;
+                }
+            }
+
+            cfg->pid_kp = (float) set;
+
+            utils_itoa((int32_t) set, buff, 4 );
+            lcd_puts_xy_cl( buff, 3, 0 );
+
+            enc->updated = FALSE;
+        }
+    } while ( FALSE == enc->pb_pressed );
+
+    enc->pb_pressed = FALSE;
+
+    /* Apply the new configuration values. */
+    pid_init();
+
+    menu_change_active_page( MENU_PAGE_PID_SETTINGS );
+}
+
+static void menu_pid_settings_ki_cb( void )
+{
+    config_t* cfg;
+    uint8_t   buff[5] = {0};
+    float     set;
+
+    lcd_clear();
+
+    /* Assume always valid pointer. */
+    cfg = config_get_hdl();
+
+    lcd_puts_xy((uint8_t*) "Ki:", 0, 0 );
+    set = (int32_t) cfg->pid_ki;
+
+    /*
+     * Force printing of the value first time.
+     */
+
+    enc->updated   = TRUE;
+    enc->direction = ENC_DIRECTION_NONE;
+
+    do
+    {
+        if ( FALSE != enc->updated )
+        {
+            if ( ENC_DIRECTION_RIGHT == enc->direction )
+            {
+                if ( set < 0.100 )
+                {
+                    set += 0.001;
+                }
+            }
+            else if ( ENC_DIRECTION_LEFT == enc->direction )
+            {
+                if ( set > 0 )
+                {
+                    set -= 0.001;
+                }
+            }
+
+            if ( set < 0 )
+            {
+                set = 0;
+            }
+
+            cfg->pid_ki = set;
+
+            utils_float_to_char( set, buff, 3 );
+            lcd_puts_xy_cl( buff, 3, 0 );
+
+            enc->updated = FALSE;
+        }
+    } while ( FALSE == enc->pb_pressed );
+
+    enc->pb_pressed = FALSE;
+
+    /* Apply the new configuration values. */
+    pid_init();
+
+    menu_change_active_page( MENU_PAGE_PID_SETTINGS );
+}
+
+static void menu_pid_settings_kd_cb( void )
+{
+    config_t* cfg;
+    uint8_t   buff[5] = {0};
+    float     set;
+
+    lcd_clear();
+
+    /* Assume always valid pointer. */
+    cfg = config_get_hdl();
+
+    lcd_puts_xy((uint8_t*) "Kd:", 0, 0 );
+    set = (int32_t) cfg->pid_kd;
+
+    /*
+     * Force printing of the value first time.
+     */
+
+    enc->updated   = TRUE;
+    enc->direction = ENC_DIRECTION_NONE;
+
+    do
+    {
+        if ( FALSE != enc->updated )
+        {
+            if ( ENC_DIRECTION_RIGHT == enc->direction )
+            {
+                if ( set < 10 )
+                {
+                    set += 0.01;
+                }
+            }
+            else if ( ENC_DIRECTION_LEFT == enc->direction )
+            {
+                if ( set > 0 )
+                {
+                    set -= 0.01;
+                }
+            }
+
+            if ( set < 0 )
+            {
+                set = 0;
+            }
+
+            cfg->pid_kd = set;
+
+            utils_float_to_char( set, buff, 2 );
+            lcd_puts_xy_cl( buff, 3, 0 );
+
+            enc->updated = FALSE;
+        }
+    } while ( FALSE == enc->pb_pressed );
+
+    enc->pb_pressed = FALSE;
+
+    /* Apply the new configuration values. */
+    pid_init();
+
+    menu_change_active_page( MENU_PAGE_PID_SETTINGS );
+}
+
+static void menu_pid_settings_back_cb( void )
+{
+    menu_page[MENU_PAGE_PID_SETTINGS].curr_pos = 0;
+    menu_change_active_page( MENU_PAGE_MAIN );
+}
+
+static void menu_main_restore_factory_def_yes_cb( void )
+{
+    status_t ret;
+
+    lcd_clear();
+
+    ret = config_restore_fact_defaults();
+
+    if ( STATUS_OK == ret )
+    {
+        lcd_puts_xy((uint8_t*) "Factory defaults", 2 , 0 );
+        lcd_puts_xy((uint8_t*) "loaded!", 6 , 1 );
+    }
+    else
+    {
+        lcd_puts_xy((uint8_t*) "Failed to load", 3 , 0 );
+        lcd_puts_xy((uint8_t*) "factory defaults!", 2 , 1 );
+    }
+
+    bsp_wait( 2, BSP_TIME_SEC );
+
+    /* In case encoder was rotating for any reason, clear the rotation. */
+    enc->updated = FALSE;
+
+    /* In case button was pressed for any reason, clear the flag. */
+    enc->pb_pressed = FALSE;
+
+    menu_page[MENU_PAGE_RESTORE_FACTORY_DEF].curr_pos = 0;
+    menu_change_active_page( MENU_PAGE_MAIN );
+}
+
+static void menu_main_restore_factory_def_no_cb( void )
+{
+    menu_page[MENU_PAGE_RESTORE_FACTORY_DEF].curr_pos = 0;
     menu_change_active_page( MENU_PAGE_MAIN );
 }
 

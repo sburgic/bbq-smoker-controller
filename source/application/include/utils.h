@@ -14,7 +14,7 @@
 
 #include "ptypes.h"
 
-uint8_t* utils_float_to_char( float val, uint8_t* out );
+uint8_t* utils_float_to_char( float val, uint8_t* out, uint8_t resolution );
 float utils_float_cels_to_fahr( float celsius );
 int16_t utils_int_cels_to_fahr( int16_t celsius );
 float utils_float_fahr_to_celsius( float fahrenheit );

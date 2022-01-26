@@ -11,7 +11,7 @@
 
 #include "utils.h"
 
-uint8_t* utils_float_to_char( float val, uint8_t* out )
+uint8_t* utils_float_to_char( float val, uint8_t* out, uint8_t resolution )
 {
     uint8_t  tmp[20] = {0};
     uint8_t* s       = tmp + 20; /* Go to end of buffer */
@@ -20,7 +20,19 @@ uint8_t* utils_float_to_char( float val, uint8_t* out )
                                   * (part to left of decimal place)
                                   */
     uint8_t  i;
-    uint8_t  j = 0;
+    uint8_t  j    = 0;
+    uint16_t dp_c = 10;
+
+    /* Limit to 4 decimal places. */
+    if ( resolution > 4 )
+    {
+        resolution = 4;
+    }
+
+    for ( i = 0; i < ( resolution - 1 ); i++ )
+    {
+        dp_c *= 10;
+    }
 
     /* Clear output buffer */
     for ( i = 0; i < 20; i++ )
@@ -34,8 +46,7 @@ uint8_t* utils_float_to_char( float val, uint8_t* out )
          * Negative numbers
          */
 
-        /* 1000 for 3 decimals, etc. */
-        decimals = (int16_t)( val * -100 ) % 100;
+        decimals = (int16_t)( val * -dp_c ) % dp_c;
         units    = (int16_t)( -1 * val );
     }
     else
@@ -44,20 +55,24 @@ uint8_t* utils_float_to_char( float val, uint8_t* out )
          * Positive numbers
          */
 
-        decimals = (int16_t)( val * 100 ) % 100;
+        decimals = (int16_t)( val * dp_c ) % dp_c;
         units    = (int16_t) val;
     }
 
-    *--s      = ( decimals % 10 ) + '0';
-    decimals /= 10; /* Repeat for as many decimal places as needed */
-    *--s = ( decimals % 10 ) + '0';
+    /* Repeat for as many decimal places as needed */
+    for ( i = 0; i < resolution; i++ )
+    {
+        *--s      = ( decimals % 10 ) + '0';
+        decimals /= 10;
+    }
+
     *--s = '.';
 
-    while ( units > 0 )
+    do
     {
         *--s = ( units % 10 ) + '0';
         units /= 10;
-    }
+    } while ( units > 0 );
 
     if ( val < 0 )
     {

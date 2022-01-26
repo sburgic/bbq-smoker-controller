@@ -51,7 +51,7 @@ static void critical_error_handler( void )
 
 static void disp_print_vmon( float voltage )
 {
-    utils_float_to_char( voltage, lcd_buff );
+    utils_float_to_char( voltage, lcd_buff, 1 );
     lcd_puts_xy((uint8_t*) "V:", 10, 0 );
     lcd_puts_xy_cl( lcd_buff, 12, 0 );
 }
@@ -95,7 +95,7 @@ static void disp_print_temperature( Max31850_Hdl_t max, uint16_t idx )
         fahrenheit = utils_float_cels_to_fahr
                             ((float)((float) max->last_temp_raw[idx] / 16.0 ));
 
-        utils_float_to_char( fahrenheit, lcd_buff );
+        utils_float_to_char( fahrenheit, lcd_buff, 1 );
         i += lcd_puts_xy( lcd_buff, i, y_axis );
         lcd_puts_xy_cl((uint8_t*) "F", i, y_axis );
     }

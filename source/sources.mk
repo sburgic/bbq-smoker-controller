@@ -19,6 +19,19 @@ LIBS_ROOT_DIR ?= $(PROJECT_ROOT_DIR)/../libs
 # STM CMSIS library root directory
 STM_CMSIS_LIB_ROOT_DIR ?= $(LIBS_ROOT_DIR)/STM32Cube_FW_G0_V1.5.0/Drivers/CMSIS
 
+# ARM Math library root directory
+ARM_MATH_LIB_ROOT_DIR ?= $(STM_CMSIS_LIB_ROOT_DIR)/DSP
+
+# ARM Math library source file directories
+ARM_MATH_SRC_DIR := $(ARM_MATH_LIB_ROOT_DIR)/Source/ControllerFunctions \
+
+# ARM Math library header file directories
+ARM_MATH_INC_DIR := $(STM_CMSIS_LIB_ROOT_DIR)/Include \
+                    $(ARM_MATH_LIB_ROOT_DIR)/Include
+
+# ARM_MATH library list of files to be compiled
+ARM_MATH_LIB_SRC_LIST := arm_pid_init_f32.c
+
 # STM HAL library root directory
 STM_HAL_LIB_ROOT_DIR ?= $(LIBS_ROOT_DIR)/STM32Cube_FW_G0_V1.5.0/Drivers/STM32G0xx_HAL_Driver
 
@@ -54,6 +67,7 @@ APP_SRC_DIR := $(PROJECT_ROOT_DIR)/source/application/src
 
 # Application header file directories
 APP_INC_DIR := $(PROJECT_ROOT_DIR)/source/application/include \
+               $(ARM_MATH_INC_DIR) \
                $(STM_HAL_INC_DIR) \
                $(LIBS_ROOT_DIR) \
                $(LIBS_ROOT_DIR)/lcd2wire/include \
@@ -75,6 +89,7 @@ APP_SRC_LIST += bluetooth.c \
                 interrupt.c \
                 main.c \
                 menu.c \
+                pid.c \
                 state.c \
                 system_init.c \
                 system_stm32g0xx.c \
@@ -88,7 +103,8 @@ APP_SRC_LIST += startup_stm32g030xx.s
 # Add source file directories to the path
 #
 
-vpath %.c $(STM_HAL_SRC_DIR) \
+vpath %.c $(ARM_MATH_SRC_DIR) \
+          $(STM_HAL_SRC_DIR) \
           $(APP_SRC_DIR)
 
 vpath %.s $(APP_SRC_DIR) \

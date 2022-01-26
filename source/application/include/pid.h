@@ -14,6 +14,8 @@
 
 #include "ptypes.h"
 
+#include <arm_math.h>
+
 void pid_init( void );
 float pid_calculate( float current, float expected );
 
