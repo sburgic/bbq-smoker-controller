@@ -239,9 +239,9 @@ static void menu_main_change_state_cb( void )
 
 static void menu_main_fan_test_cb( void )
 {
-    uint8_t fan_load = 0;
-    uint8_t buff[3]  = {0};
-    uint8_t i        = 9;
+    uint8_t fan_pwm_percent = 0;
+    uint8_t buff[3]         = {0};
+    uint8_t i               = 9;
 
     lcd_clear();
     lcd_puts_xy((uint8_t*) "Fan load:", 0, 0 );
@@ -257,25 +257,25 @@ static void menu_main_fan_test_cb( void )
         {
             if ( ENC_DIRECTION_RIGHT == enc->direction )
             {
-                if ( fan_load < 100 )
+                if ( fan_pwm_percent < 100 )
                 {
-                    fan_load += 1;
+                    fan_pwm_percent += 1;
                 }
             }
             else
             {
-                if ( fan_load > 0 )
+                if ( fan_pwm_percent > 0 )
                 {
-                    fan_load -= 1;
+                    fan_pwm_percent -= 1;
                 }
             }
 
-            fan_set_pwm( fan_load );
+            fan_set_pwm( fan_pwm_percent );
 
             /* Verify entry. */
-            fan_load = fan_get_pwm();
+            fan_pwm_percent = fan_get_pwm();
 
-            utils_itoa( fan_load, &buff[0], 3 );
+            utils_itoa( fan_pwm_percent, &buff[0], 3 );
             i += lcd_puts_xy( buff, i, 0 );
             lcd_puts_xy((uint8_t*) "% ", i, 0 );
 
@@ -341,7 +341,7 @@ static void menu_set_temp_ts_cb( void )
             }
             else
             {
-                if ( cfg->ts > 40 )
+                if ( cfg->ts > 20 )
                 {
                     cfg->ts--;
                 }

@@ -14,7 +14,7 @@
 #include <stm32g0xx_hal.h>
 
 /* TIM1 Channel1 duty cycle = (TIM1_CCR1 / (TIM1_ARR + 1)) * 100 = 50%. */
-#define PERIOD_VALUE (uint32_t)( 400 - 1 )
+#define PERIOD_VALUE (uint32_t)( 400 )
 
 static TIM_HandleTypeDef tim1;
 
@@ -116,21 +116,26 @@ void fan_stop( void )
     HAL_TIM_PWM_Stop( &tim1, TIM_CHANNEL_1 );
 }
 
-void fan_set_pwm( uint8_t pwm )
+void fan_set_pwm( float percent )
 {
-    if ( pwm > 100 )
+    if ( percent <= 0)
     {
-        tim1.Instance->CCR1 = 400;
+        tim1.Instance->CCR1 = 0;
+    }
+    else if ( percent > 100 )
+    {
+        tim1.Instance->CCR1 = PERIOD_VALUE;
     }
     else
     {
-        tim1.Instance->CCR1 = ( pwm << 2 ); /* Multiply by 4. */
+        tim1.Instance->CCR1 = (uint32_t) \
+                              ((((float) PERIOD_VALUE ) * percent ) / 100 );
     }
 }
 
-uint8_t fan_get_pwm( void )
+uint32_t fan_get_pwm( void )
 {
-    return (uint8_t) ( tim1.Instance->CCR1 >> 2 ); /* Divide by 4. */
+    return ( tim1.Instance->CCR1 / ( PERIOD_VALUE / 100 ));
 }
 
 /*

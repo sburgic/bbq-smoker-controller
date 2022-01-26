@@ -17,6 +17,7 @@
 #include "encoder.h"
 #include "fan.h"
 #include "menu.h"
+#include "pid.h"
 #include "ptypes.h"
 #include "state.h"
 #include "system_init.h"
@@ -153,8 +154,9 @@ int main( void )
     Max31850_Hdl_t max_hdl = NULL;
     uint16_t       tm_idx;
     uint16_t       ts_idx;
-    uint8_t        fan_pwm     = 0;
+    float          fan_pwm      = 0;
     s_ctrl_state_t s_ctrl_state = S_CTRL_STATE_IDLE;
+    config_t*      cfg          = NULL;
 
     HAL_Init();
     system_clk_cfg();
@@ -229,6 +231,18 @@ int main( void )
         lcd_puts_xy((uint8_t*) "Using defaults!", 0, 1 );
         bsp_wait( 1, BSP_TIME_SEC );
     }
+    else
+    {
+        cfg = config_get_hdl();
+    }
+
+    if ( NULL == cfg )
+    {
+        lcd_clear();
+        lcd_puts_xy((uint8_t*) "Config handle error!", 0, 0 );
+        bsp_wait( 1, BSP_TIME_SEC );
+        critical_error_handler();
+    }
 
     ret = bt_init();
     if ( STATUS_OK != ret )
@@ -241,6 +255,7 @@ int main( void )
     fan_init();
     fan_set_pwm( fan_pwm );
     fan_start();
+    pid_init();
     lcd_clear();
 
     /* Reset encoder button if pressed during the startup. */
@@ -277,7 +292,7 @@ int main( void )
             }
 
             fan_pwm = fan_get_pwm();
-            disp_print_fan_load( fan_pwm );
+            disp_print_fan_load((uint8_t) fan_pwm );
         }
 
         bret = max31850_update();
@@ -322,7 +337,10 @@ int main( void )
         }
         else
         {
-
+            fan_pwm = pid_calculate( max_hdl->last_temp_raw[1] / 16.0
+                                   , cfg->ts
+                                   );
+            fan_set_pwm( fan_pwm );
         }
 
         disp_print_state( s_ctrl_state );

@@ -16,8 +16,8 @@
 
 status_t fan_init( void );
 status_t fan_start( void );
-void fan_set_pwm( uint8_t pwm );
-uint8_t fan_get_pwm( void );
+void fan_set_pwm( float percent );
+uint32_t fan_get_pwm( void );
 void fan_stop( void );
 
 #endif /* __FAN_H__ */

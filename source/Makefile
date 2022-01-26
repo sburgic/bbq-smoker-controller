@@ -6,6 +6,7 @@
 ##
 ## Revision
 ##    19-Nov-2021 (SSB) [] Initial
+##    25-Jan-2022 (SSB) [] Add ARM Math library
 ##
 
 # Let make be silent by default
@@ -64,6 +65,7 @@ include $(BASE_DIR)/oshelpers.mk
 APP_DEFS := -DUSE_HAL_DRIVER \
             -DSTM32G030xx
 
+
 # Linker script without extension
 LDSCRIPT := $(PROJECT_ROOT_DIR)/source/toolchain/$(TOOLCHAIN)/linker/stm32g030xx_flash
 
@@ -79,11 +81,22 @@ STM_HAL_LIB_OBJ_DIR := $(BUILD_DIR)/stm/hal/$(BUILD_TYPE)/obj
 STM_HAL_LIB_OUT_DIR := $(BUILD_DIR)/stm/hal/$(BUILD_TYPE)/lib
 STM_HAL_LIB_DEP_DIR := $(BUILD_DIR)/stm/hal/$(BUILD_TYPE)/dep
 
-# Libraries to create
-STM_HAL_LIB := stm32_hal.a
+ARM_MATH_LIB_OBJ_DIR := $(BUILD_DIR)/arm/math/$(BUILD_TYPE)/obj
+ARM_MATH_LIB_OUT_DIR := $(BUILD_DIR)/arm/math/$(BUILD_TYPE)/lib
+ARM_MATH_LIB_DEP_DIR := $(BUILD_DIR)/arm/math/$(BUILD_TYPE)/dep
 
+#
+# Libraries to create
+#
+
+STM_HAL_LIB  := stm32_hal.a
+ARM_MATH_LIB := arm_math.a
+
+#
 # Created libraries to be added to the build
-CC_LIBS := $(STM_HAL_LIB)
+#
+CC_LIBS := $(STM_HAL_LIB) \
+		   $(ARM_MATH_LIB)
 
 # Include toolchain definitions
 include $(BASE_DIR)/toolchain_$(TOOLCHAIN).mk
@@ -91,14 +104,22 @@ include $(BASE_DIR)/toolchain_$(TOOLCHAIN).mk
 # Include source file definitions
 include sources.mk
 
+#
 # Create object list(s)
-STM_HAL_LIB_OBJ_LIST := $(addprefix $(STM_HAL_LIB_OBJ_DIR)/,$(filter %.o,$(STM_HAL_LIB_SRC_LIST:.c=.o)))
-APP_OBJ_LIST         := $(addprefix $(APP_OBJ_DIR)/,$(filter %.o,$(APP_SRC_LIST:.c=.o) $(APP_SRC_LIST:.s=.o)))
+#
 
+ARM_MATH_LIB_OBJ_LIST := $(addprefix $(ARM_MATH_LIB_OBJ_DIR)/,$(filter %.o,$(ARM_MATH_LIB_SRC_LIST:.c=.o)))
+STM_HAL_LIB_OBJ_LIST  := $(addprefix $(STM_HAL_LIB_OBJ_DIR)/,$(filter %.o,$(STM_HAL_LIB_SRC_LIST:.c=.o)))
+APP_OBJ_LIST          := $(addprefix $(APP_OBJ_DIR)/,$(filter %.o,$(APP_SRC_LIST:.c=.o) $(APP_SRC_LIST:.s=.o)))
+
+#
 # Create header include flags
-CC_INC_FLAG          := -I
-STM_HAL_INC_PARAMS   := $(addprefix $(CC_INC_FLAG),$(STM_HAL_INC_DIR))
-APP_INC_PARAMS       := $(addprefix $(CC_INC_FLAG),$(APP_INC_DIR))
+#
+
+CC_INC_FLAG         := -I
+ARM_MATH_INC_PARAMS := $(addprefix $(CC_INC_FLAG),$(ARM_MATH_INC_DIR))
+STM_HAL_INC_PARAMS  := $(addprefix $(CC_INC_FLAG),$(STM_HAL_INC_DIR))
+APP_INC_PARAMS      := $(addprefix $(CC_INC_FLAG),$(APP_INC_DIR))
 
 #
 # Add existing libraries to the build
@@ -114,8 +135,12 @@ include $(LCD2WIRE_LIB_ROOT)/lcd2wire.mk
 include $(ONE_WIRE_LIB_ROOT)/one_wire.mk
 include $(UART_LIB_ROOT)/uart.mk
 
+#
 # Create library include flags
-CC_LIBS_DIR += $(STM_HAL_LIB_OUT_DIR)
+#
+
+CC_LIBS_DIR += $(STM_HAL_LIB_OUT_DIR) \
+               $(ARM_MATH_LIB_OUT_DIR)
 
 CC_LINK_INC_FLAG   := -L
 CC_LINK_INC_PARAMS := $(addprefix $(CC_LINK_INC_FLAG),$(CC_LIBS_DIR))
@@ -141,6 +166,7 @@ endif
 ifeq ($(INC_DEPENDENCIES),1)
     -include $(wildcard $(APP_DEP_DIR)/*.d)
     -include $(wildcard $(STM_HAL_LIB_DEP_DIR)/*.d)
+	-include $(wildcard $(ARM_MATH_LIB_DEP_DIR)/*.d)
 endif
 
 #
@@ -168,6 +194,15 @@ $(TARGET_BIN): $(TARGET_ELF)
 $(TARGET_HEX): $(TARGET_ELF)
 	$(OBJCPY) $(OBJCPY_HEX_FLAGS) $< $@
 
+$(ARM_MATH_LIB_OBJ_DIR)/%.o: %.c | $(ARM_MATH_LIB_OBJ_DIR) $(ARM_MATH_LIB_DEP_DIR)
+	@echo "Compiling $(notdir $<)"
+	$(CC) $(CFLAGS) $(DEP_FLAGS) $(ARM_MATH_LIB_DEP_DIR)/$*.d $(APP_DEFS) $(ARM_MATH_INC_PARAMS) -o $@ -c $<
+
+$(ARM_MATH_LIB): $(ARM_MATH_LIB_OBJ_LIST) | $(ARM_MATH_LIB_OUT_DIR)
+	@echo "Archiving library $@"
+	$(AR) $(ARFLAGS) $(ARM_MATH_LIB_OUT_DIR)/lib$@ $^
+	@echo
+
 $(STM_HAL_LIB_OBJ_DIR)/%.o: %.c | $(STM_HAL_LIB_OBJ_DIR) $(STM_HAL_LIB_DEP_DIR)
 	@echo "Compiling $(notdir $<)"
 	$(CC) $(CFLAGS) $(DEP_FLAGS) $(STM_HAL_LIB_DEP_DIR)/$*.d $(APP_DEFS) $(STM_HAL_INC_PARAMS) -o $@ -c $<
@@ -184,6 +219,15 @@ $(APP_EXE_DIR):
 	$(MD) $@
 
 $(APP_DEP_DIR):
+	$(MD) $@
+
+$(ARM_MATH_LIB_OBJ_DIR):
+	$(MD) $@
+
+$(ARM_MATH_LIB_OUT_DIR):
+	$(MD) $@
+
+$(ARM_MATH_LIB_DEP_DIR):
 	$(MD) $@
 
 $(STM_HAL_LIB_OBJ_DIR):
