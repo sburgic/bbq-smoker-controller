@@ -56,17 +56,14 @@ static void disp_print_vmon( float voltage )
     lcd_puts_xy_cl( lcd_buff, 12, 0 );
 }
 
-static void disp_print_fan_load( uint8_t load )
+static void disp_print_fan_pwm( uint8_t pwm )
 {
-    uint8_t i = 0;
+    uint8_t  i = 0;
 
-    utils_itoa( load, lcd_buff, 3 );
+    utils_itoa( pwm, lcd_buff, 3 );
     i += lcd_puts_xy((uint8_t*) "Fan:", 0, 0 );
     i += lcd_puts_xy( lcd_buff, i, 0 );
-    i += lcd_puts_xy((uint8_t*) "%", i, 0 );
-
-    /* Clear last digit in case it is a leftover from the previous value. */
-    lcd_puts_xy((uint8_t*) " ", i, 0 );
+    lcd_puts_xy((uint8_t*) "%  ", i, 0 );
 }
 
 static void disp_print_temperature( Max31850_Hdl_t max, uint16_t idx )
@@ -154,9 +151,9 @@ int main( void )
     Max31850_Hdl_t max_hdl = NULL;
     uint16_t       tm_idx;
     uint16_t       ts_idx;
-    float          fan_pwm      = 0;
     s_ctrl_state_t s_ctrl_state = S_CTRL_STATE_IDLE;
     config_t*      cfg          = NULL;
+    float          fan_pwm      = 0;
 
     HAL_Init();
     system_clk_cfg();
@@ -292,7 +289,7 @@ int main( void )
             }
 
             fan_pwm = fan_get_pwm();
-            disp_print_fan_load((uint8_t) fan_pwm );
+            disp_print_fan_pwm((uint8_t) fan_pwm );
         }
 
         bret = max31850_update();
@@ -314,7 +311,6 @@ int main( void )
         {
             fan_pwm = 0;
             fan_set_pwm( fan_pwm );
-
             signal_alarm( s_ctrl_state );
 
             while ( FALSE == enc_hdl->pb_pressed );
@@ -337,9 +333,7 @@ int main( void )
         }
         else
         {
-            fan_pwm = pid_calculate( max_hdl->last_temp_raw[1] / 16.0
-                                   , cfg->ts
-                                   );
+            fan_pwm = pid_calculate();
             fan_set_pwm( fan_pwm );
         }
 

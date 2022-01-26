@@ -75,7 +75,7 @@ status_t config_restore_fact_defaults( void )
     cfg_data.bt_pin[5]  = 6;
     cfg_data.magic      = 0xDEADBEEF;
     cfg_data.pid_kp     = 100;
-    cfg_data.pid_ki     = 0.01;
+    cfg_data.pid_ki     = 0.001;
     cfg_data.pid_kd     = 10;
 
     utils_memcpy( &cfg_data.bt_name[0]

@@ -13,6 +13,7 @@
 
 #include "buzzer.h"
 #include "encoder.h"
+#include "menu.h"
 #include "time.h"
 
 #include <uart.h>
@@ -47,6 +48,7 @@ void SysTick_Handler( void )
   enc_sw_irq_hdl();
   enc_irq_hdl();
   buzzer_irq_hdl();
+  menu_irq_hdl();
 }
 
 void TIM17_IRQHandler( void )

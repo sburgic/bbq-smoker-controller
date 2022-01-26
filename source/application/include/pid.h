@@ -17,6 +17,6 @@
 #include <arm_math.h>
 
 void pid_init( void );
-float pid_calculate( float current, float expected );
+float pid_calculate( void );
 
 #endif /* __PID_H__ */

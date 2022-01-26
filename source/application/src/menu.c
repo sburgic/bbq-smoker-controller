@@ -23,13 +23,19 @@
 #include <lcd2wire.h>
 #include <max31850.h>
 
-static Enc_Hdl_t         enc;
-static config_t*         cfg;
-static Max31850_Hdl_t    max;
-static uint8_t           enc_row_idx = 0;
-static bool_t            menu_done   = FALSE;
-static menu_page_idx_t   active_page = MENU_PAGE_MAIN;
-static bool_t            trans       = FALSE;
+#define MENU_IRQ_UPDATE_TIMEOUT_MS (500)
+#define MENU_INACTIVITY_TIMEOUT_MS (20000)
+
+static Enc_Hdl_t       enc;
+static config_t*       cfg;
+static Max31850_Hdl_t  max;
+static uint8_t         enc_row_idx           = 0;
+static bool_t          menu_done             = TRUE;
+static menu_page_idx_t active_page           = MENU_PAGE_MAIN;
+static bool_t          trans                 = FALSE;
+static uint16_t        menu_irq_ticks        = 0;
+static uint16_t        menu_inactivity_ticks = 0;
+static bool_t          pid_enabled           = TRUE;
 
 /*
  * Main page menu callbacks.
@@ -220,17 +226,18 @@ static void menu_dump_temperature( bool_t  clear
     if ( 0 == idx )
     {
         temp = cfg->ts;
+        i    = 3;
     }
     else if ( 1 == idx )
     {
         temp = cfg->tm_phase_1;
+        i    = 4;
     }
     else
     {
         temp = cfg->tm_phase_2;
+        i    = 4;
     }
-
-    i = 4;
 
     utils_itoa( temp, buff, 3 );
     i += lcd_puts_xy( buff, i, row );
@@ -266,7 +273,7 @@ static void menu_main_get_temperatures_cb( void )
 {
     menu_dump_all_temperatures( TRUE, TRUE );
 
-    while ( FALSE == enc->pb_pressed );
+    while (( FALSE == enc->pb_pressed ) && ( FALSE == menu_done ));
 
     enc->pb_pressed = FALSE;
 
@@ -291,55 +298,72 @@ static void menu_main_pid_settings_cb( void )
 
 static void menu_main_fan_test_cb( void )
 {
-    uint8_t fan_pwm_percent = 0;
-    uint8_t buff[3]         = {0};
-    uint8_t i               = 9;
+    uint8_t        fan_pwm_percent = 0;
+    uint8_t        buff[3]         = {0};
+    uint8_t        i               = 9;
+    s_ctrl_state_t state;
 
+    state = state_get();
     lcd_clear();
-    lcd_puts_xy((uint8_t*) "Fan load:", 0, 0 );
-    fan_start();
 
-    /* Force to print the initial value (0). */
-    enc->updated   = TRUE;
-    enc->direction = ENC_DIRECTION_LEFT;
-
-    do
+    if ( S_CTRL_STATE_IDLE == state )
     {
-        if ( FALSE != enc->updated )
+        pid_enabled = FALSE;
+
+        lcd_puts_xy((uint8_t*) "Fan load:", 0, 0 );
+        fan_start();
+
+        /* Force to print the initial value (0). */
+        enc->updated   = TRUE;
+        enc->direction = ENC_DIRECTION_LEFT;
+
+        do
         {
-            if ( ENC_DIRECTION_RIGHT == enc->direction )
+            if ( FALSE != enc->updated )
             {
-                if ( fan_pwm_percent < 100 )
+                if ( ENC_DIRECTION_RIGHT == enc->direction )
                 {
-                    fan_pwm_percent += 1;
+                    if ( fan_pwm_percent < 100 )
+                    {
+                        fan_pwm_percent += 1;
+                    }
                 }
-            }
-            else
-            {
-                if ( fan_pwm_percent > 0 )
+                else
                 {
-                    fan_pwm_percent -= 1;
+                    if ( fan_pwm_percent > 0 )
+                    {
+                        fan_pwm_percent -= 1;
+                    }
                 }
+
+                fan_set_pwm( fan_pwm_percent );
+
+                /* Verify entry. */
+                fan_pwm_percent = fan_get_pwm();
+
+                utils_itoa( fan_pwm_percent, &buff[0], 3 );
+                i += lcd_puts_xy( buff, i, 0 );
+                lcd_puts_xy((uint8_t*) "% ", i, 0 );
+
+                enc->updated          = FALSE;
+                menu_inactivity_ticks = 0;
+
+                i = 9;
             }
 
-            fan_set_pwm( fan_pwm_percent );
+        } while (( FALSE == enc->pb_pressed ) && ( FALSE == menu_done ));
 
-            /* Verify entry. */
-            fan_pwm_percent = fan_get_pwm();
+        enc->pb_pressed = FALSE;
+        pid_enabled     = TRUE;
+        fan_set_pwm( 0 );
+    }
+    else
+    {
+        lcd_puts_xy((uint8_t*) "Allowed only in", 2, 0 );
+        lcd_puts_xy((uint8_t*) "IDLE state!", 4 ,1 );
 
-            utils_itoa( fan_pwm_percent, &buff[0], 3 );
-            i += lcd_puts_xy( buff, i, 0 );
-            lcd_puts_xy((uint8_t*) "% ", i, 0 );
-
-            enc->updated = FALSE;
-            i = 9;
-        }
-
-    } while ( FALSE == enc->pb_pressed );
-
-    enc->pb_pressed = FALSE;
-
-    fan_set_pwm( 0 );
+        bsp_wait( 2, BSP_TIME_SEC );
+    }
 }
 
 static void menu_main_bt_info_cb( void )
@@ -359,7 +383,7 @@ static void menu_main_bt_info_cb( void )
 
     lcd_puts_xy( buff, 0, 3 );
 
-    while ( FALSE == enc->pb_pressed );
+    while (( FALSE == enc->pb_pressed ) && ( FALSE == menu_done ));
     enc->pb_pressed = FALSE;
 
     /* In case encoder was rotating for any reason, clear the rotation. */
@@ -406,9 +430,10 @@ static void menu_set_temp_ts_cb( void )
 
             menu_dump_temperature( FALSE, FALSE, 0, 0 );
 
-            enc->updated = FALSE;
+            enc->updated          = FALSE;
+            menu_inactivity_ticks = 0;
         }
-    } while ( FALSE == enc->pb_pressed );
+    } while (( FALSE == enc->pb_pressed ) && ( FALSE == menu_done ));
 
     enc->pb_pressed = FALSE;
 }
@@ -438,9 +463,10 @@ static void menu_set_temp_tm1_cb( void )
 
             menu_dump_temperature( FALSE, FALSE, 1, 0 );
 
-            enc->updated = FALSE;
+            enc->updated          = FALSE;
+            menu_inactivity_ticks = 0;
         }
-    } while ( FALSE == enc->pb_pressed );
+    } while (( FALSE == enc->pb_pressed ) && ( FALSE == menu_done ));
 
     enc->pb_pressed = FALSE;
 }
@@ -471,9 +497,10 @@ static void menu_set_temp_tm2_cb( void )
 
             menu_dump_temperature( FALSE, FALSE, 2, 0 );
 
-            enc->updated = FALSE;
+            enc->updated          = FALSE;
+            menu_inactivity_ticks = 0;
         }
-    } while ( FALSE == enc->pb_pressed );
+    } while (( FALSE == enc->pb_pressed ) && ( FALSE == menu_done ));
 
     enc->pb_pressed = FALSE;
 }
@@ -588,9 +615,10 @@ static void menu_pid_settings_kp_cb( void )
             utils_itoa((int32_t) set, buff, 4 );
             lcd_puts_xy_cl( buff, 3, 0 );
 
-            enc->updated = FALSE;
+            enc->updated          = FALSE;
+            menu_inactivity_ticks = 0;
         }
-    } while ( FALSE == enc->pb_pressed );
+    } while (( FALSE == enc->pb_pressed ) && ( FALSE == menu_done ));
 
     enc->pb_pressed = FALSE;
 
@@ -612,7 +640,7 @@ static void menu_pid_settings_ki_cb( void )
     cfg = config_get_hdl();
 
     lcd_puts_xy((uint8_t*) "Ki:", 0, 0 );
-    set = (int32_t) cfg->pid_ki;
+    set = cfg->pid_ki;
 
     /*
      * Force printing of the value first time.
@@ -650,9 +678,10 @@ static void menu_pid_settings_ki_cb( void )
             utils_float_to_char( set, buff, 3 );
             lcd_puts_xy_cl( buff, 3, 0 );
 
-            enc->updated = FALSE;
+            enc->updated          = FALSE;
+            menu_inactivity_ticks = 0;
         }
-    } while ( FALSE == enc->pb_pressed );
+    } while (( FALSE == enc->pb_pressed ) && ( FALSE == menu_done ));
 
     enc->pb_pressed = FALSE;
 
@@ -674,7 +703,7 @@ static void menu_pid_settings_kd_cb( void )
     cfg = config_get_hdl();
 
     lcd_puts_xy((uint8_t*) "Kd:", 0, 0 );
-    set = (int32_t) cfg->pid_kd;
+    set = cfg->pid_kd;
 
     /*
      * Force printing of the value first time.
@@ -712,9 +741,10 @@ static void menu_pid_settings_kd_cb( void )
             utils_float_to_char( set, buff, 2 );
             lcd_puts_xy_cl( buff, 3, 0 );
 
-            enc->updated = FALSE;
+            enc->updated          = FALSE;
+            menu_inactivity_ticks = 0;
         }
-    } while ( FALSE == enc->pb_pressed );
+    } while (( FALSE == enc->pb_pressed ) && ( FALSE == menu_done ));
 
     enc->pb_pressed = FALSE;
 
@@ -822,7 +852,9 @@ static void menu_handle_cursor( void )
 
         enc_row_idx = ( menu_page[active_page].curr_pos % MENU_NO_OF_ROWS );
         menu_print_cursor( enc_row_idx  );
-        enc->updated = FALSE;
+
+        enc->updated          = FALSE;
+        menu_inactivity_ticks = 0;
     }
 }
 
@@ -901,6 +933,8 @@ void menu_open( void )
     cfg = config_get_hdl();
     max = max31850_get_hdl();
 
+    menu_done = FALSE;
+
     if ((( NULL != enc ) && ( NULL != cfg )) && ( NULL != max ))
     {
         /* Clear encoder button pressed flag. */
@@ -916,9 +950,54 @@ void menu_open( void )
          * Reset variables.
          */
 
-        menu_done                       = FALSE;
+        menu_done                       = TRUE;
         enc_row_idx                     = 0;
         active_page                     = MENU_PAGE_MAIN;
         menu_page[active_page].curr_pos = 0;
+    }
+}
+
+void menu_irq_hdl( void )
+{
+    float          pwm;
+    s_ctrl_state_t state;
+    bool_t         bret;
+
+    if ( FALSE == menu_done )
+    {
+        if ( FALSE != pid_enabled )
+        {
+            menu_irq_ticks++;
+
+            if ( menu_irq_ticks >= MENU_IRQ_UPDATE_TIMEOUT_MS )
+            {
+                state = state_get();
+
+                if ( S_CTRL_STATE_IDLE != state )
+                {
+                    bret = max31850_update();
+
+                    if ( FALSE != bret )
+                    {
+                        pwm = pid_calculate();
+                        fan_set_pwm( pwm );
+                        menu_irq_ticks = 0;
+                    }
+                }
+            }
+
+            menu_inactivity_ticks++;
+
+            if ( menu_inactivity_ticks >= MENU_INACTIVITY_TIMEOUT_MS )
+            {
+                menu_done             = TRUE;
+                menu_inactivity_ticks = 0;
+            }
+        }
+    }
+    else
+    {
+        menu_irq_ticks        = 0;
+        menu_inactivity_ticks = 0;
     }
 }

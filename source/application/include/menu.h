@@ -44,5 +44,6 @@ typedef enum
 } menu_page_idx_t;
 
 void menu_open( void );
+void menu_irq_hdl( void );
 
 #endif /* __MENU_H__ */
