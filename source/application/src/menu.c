@@ -455,7 +455,7 @@ static void menu_set_temp_tm1_cb( void )
             }
             else
             {
-                if ( cfg->tm_phase_1 > 40 )
+                if ( cfg->tm_phase_1 > 20 )
                 {
                     cfg->tm_phase_1--;
                 }
@@ -489,7 +489,7 @@ static void menu_set_temp_tm2_cb( void )
             }
             else
             {
-                if ( cfg->tm_phase_2 > 40 )
+                if ( cfg->tm_phase_2 > 20 )
                 {
                     cfg->tm_phase_2--;
                 }

@@ -18,7 +18,7 @@ typedef enum
     S_CTRL_STATE_PREHEAT_ACTIVE,
     S_CTRL_STATE_PREHEAT_DONE,
     S_CTRL_STATE_HEAT_ACTIVE,
-    S_CTRL_STATE_HEAD_DONE
+    S_CTRL_STATE_HEAT_DONE
 } s_ctrl_state_t;
 
 void state_set( s_ctrl_state_t new_state );

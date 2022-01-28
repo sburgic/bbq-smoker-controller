@@ -28,12 +28,14 @@
 #include <lcd2wire.h>
 #include <max31850.h>
 
-#define LCD_OUT_BUFF_SIZE   (20)
-#define VMON_UPDATE_RATE_MS (1000)
+#define LCD_OUT_BUFF_SIZE      (20)
+#define INFO_UPDATE_RATE_MS    (1000)
+#define TEMP_MONITOR_TIMEOUT_S (600)
 
 static bool_t   vmon_active                 = FALSE;
 static uint8_t  lcd_buff[LCD_OUT_BUFF_SIZE] = {0};
-static Bsp_Time timeout_vmon;
+static Bsp_Time timeout_info;
+static Bsp_Time temp_monitor;
 
 static void critical_error_handler( void )
 {
@@ -131,11 +133,11 @@ static void signal_alarm( s_ctrl_state_t state )
 
     if ( S_CTRL_STATE_PREHEAT_DONE == state )
     {
-        lcd_puts_xy((uint8_t*) "Preheating done!", 3, 2 );
+        lcd_puts_xy((uint8_t*) "Preheating done!", 2, 0 );
     }
-    else
+    else if ( S_CTRL_STATE_HEAT_DONE == state )
     {
-        lcd_puts_xy((uint8_t*) "All done!", 3, 2 );
+        lcd_puts_xy((uint8_t*) "All done!", 5, 0 );
     }
 
     lcd_puts_xy((uint8_t*) "Press knob to", 3, 2 );
@@ -151,9 +153,10 @@ int main( void )
     Max31850_Hdl_t max_hdl = NULL;
     uint16_t       tm_idx;
     uint16_t       ts_idx;
-    s_ctrl_state_t s_ctrl_state = S_CTRL_STATE_IDLE;
-    config_t*      cfg          = NULL;
-    float          fan_pwm      = 0;
+    s_ctrl_state_t s_ctrl_state        = S_CTRL_STATE_IDLE;
+    config_t*      cfg                 = NULL;
+    float          fan_pwm             = 0;
+    bool_t         is_temp_monitor_cfg = FALSE;
 
     HAL_Init();
     system_clk_cfg();
@@ -263,7 +266,7 @@ int main( void )
 
     for (;;)
     {
-        bret = bsp_is_timeout( timeout_vmon );
+        bret = bsp_is_timeout( timeout_info );
 
         if ( FALSE != bret )
         {
@@ -274,9 +277,9 @@ int main( void )
                 if ( STATUS_OK == ret )
                 {
                     disp_print_vmon( voltage );
-                    bsp_set_timeout( VMON_UPDATE_RATE_MS
+                    bsp_set_timeout( INFO_UPDATE_RATE_MS
                                    , BSP_TIME_MSEC
-                                   , &timeout_vmon
+                                   , &timeout_info
                                    );
                 }
                 else
@@ -303,11 +306,38 @@ int main( void )
         {
             enc_hdl->pb_pressed = FALSE;
             menu_open();
+            enc_hdl->pb_pressed = FALSE;
             s_ctrl_state = state_get();
+
+            /* Reset temeprature monitor. */
+            if ( FALSE != is_temp_monitor_cfg )
+            {
+                bsp_set_timeout( TEMP_MONITOR_TIMEOUT_S
+                                , BSP_TIME_SEC
+                                , &temp_monitor
+                                );
+            }
         }
 
-        if (( S_CTRL_STATE_PREHEAT_DONE == s_ctrl_state )
-         || ( S_CTRL_STATE_HEAD_DONE == s_ctrl_state ))
+        if ( S_CTRL_STATE_IDLE == s_ctrl_state )
+        {
+            fan_pwm = 0;
+            fan_set_pwm( fan_pwm );
+            is_temp_monitor_cfg = FALSE;
+        }
+        else if ( S_CTRL_STATE_PREHEAT_DONE == s_ctrl_state )
+        {
+            signal_alarm( s_ctrl_state );
+
+            while ( FALSE == enc_hdl->pb_pressed );
+            enc_hdl->pb_pressed = FALSE;
+            buzzer_set_toggle( FALSE );
+            lcd_clear();
+
+            state_set( S_CTRL_STATE_HEAT_ACTIVE );
+            is_temp_monitor_cfg = FALSE;
+        }
+        else if ( S_CTRL_STATE_HEAT_DONE == s_ctrl_state )
         {
             fan_pwm = 0;
             fan_set_pwm( fan_pwm );
@@ -316,29 +346,115 @@ int main( void )
             while ( FALSE == enc_hdl->pb_pressed );
             enc_hdl->pb_pressed = FALSE;
             buzzer_set_toggle( FALSE );
+            lcd_clear();
 
-            if ( S_CTRL_STATE_PREHEAT_DONE == s_ctrl_state )
+            state_set( S_CTRL_STATE_IDLE );
+            is_temp_monitor_cfg = FALSE;
+        }
+        else if ( S_CTRL_STATE_PREHEAT_ACTIVE == s_ctrl_state )
+        {
+            fan_pwm = pid_calculate();
+            fan_set_pwm( fan_pwm );
+
+            if ( MAX31850_SENSOR_ERROR != max_hdl->last_temp_raw[0] )
             {
-                state_set( S_CTRL_STATE_HEAT_ACTIVE );
+                if (( max_hdl->last_temp_raw[0] >> 4 ) >= cfg->tm_phase_1 )
+                {
+                    state_set( S_CTRL_STATE_PREHEAT_DONE );
+                }
             }
             else
             {
-                state_set( S_CTRL_STATE_IDLE );
+                fan_pwm = 0;
+                fan_set_pwm( fan_pwm );
             }
-        }
-        else if ( S_CTRL_STATE_IDLE == s_ctrl_state )
-        {
-            fan_pwm = 0;
-            fan_set_pwm( fan_pwm );
+
+            if ( FALSE == is_temp_monitor_cfg )
+            {
+                bsp_set_timeout( TEMP_MONITOR_TIMEOUT_S
+                               , BSP_TIME_SEC
+                               , &temp_monitor
+                               );
+
+                is_temp_monitor_cfg = TRUE;
+            }
         }
         else
         {
             fan_pwm = pid_calculate();
             fan_set_pwm( fan_pwm );
+
+            if ( MAX31850_SENSOR_ERROR != max_hdl->last_temp_raw[0] )
+            {
+                if (( max_hdl->last_temp_raw[0] >> 4 ) >= cfg->tm_phase_2 )
+                {
+                    state_set( S_CTRL_STATE_HEAT_DONE );
+                }
+            }
+            else
+            {
+                fan_pwm = 0;
+                fan_set_pwm( fan_pwm );
+            }
+
+            if ( FALSE == is_temp_monitor_cfg )
+            {
+                bsp_set_timeout( TEMP_MONITOR_TIMEOUT_S
+                               , BSP_TIME_SEC
+                               , &temp_monitor
+                               );
+
+                is_temp_monitor_cfg = TRUE;
+            }
         }
 
+        s_ctrl_state = state_get();
         disp_print_state( s_ctrl_state );
         bt_task();
+
+        if (( S_CTRL_STATE_PREHEAT_ACTIVE == s_ctrl_state )
+         || ( S_CTRL_STATE_HEAT_ACTIVE == s_ctrl_state ))
+        {
+            bret = bsp_is_timeout( temp_monitor );
+
+            if ( FALSE != bret )
+            {
+                if ( MAX31850_SENSOR_ERROR != max_hdl->last_temp_raw[1] )
+                {
+                    if (( cfg->ts - ( max_hdl->last_temp_raw[1] >> 4 )) >= 10 )
+                    {
+                        buzzer_set_toggle( TRUE );
+                        lcd_clear();
+                        lcd_puts_xy((uint8_t*) "Smoke temperature", 1, 0 );
+                        lcd_puts_xy((uint8_t*) "too low!", 6, 1 );
+
+                        while ( FALSE == enc_hdl->pb_pressed );
+                        enc_hdl->pb_pressed = FALSE;
+                        buzzer_set_toggle( FALSE );
+                    }
+                    else if ((( max_hdl->last_temp_raw[1] >> 4 ) - cfg->ts )
+                             >= 10 )
+                    {
+                        fan_pwm = 0;
+                        fan_set_pwm( fan_pwm );
+
+                        buzzer_set_toggle( TRUE );
+                        lcd_clear();
+                        lcd_puts_xy((uint8_t*) "Smoke temperature", 1, 0 );
+                        lcd_puts_xy((uint8_t*) "too high!", 5, 1 );
+
+                        while ( FALSE == enc_hdl->pb_pressed );
+                        enc_hdl->pb_pressed = FALSE;
+                        buzzer_set_toggle( FALSE );
+                    }
+                }
+
+                bsp_set_timeout( TEMP_MONITOR_TIMEOUT_S
+                               , BSP_TIME_SEC
+                               , &temp_monitor
+                               );
+            }
+        }
     }
 
 #ifndef __ICCARM__
