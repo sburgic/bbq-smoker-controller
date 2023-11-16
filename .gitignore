@@ -17,3 +17,4 @@ cube/Drivers/*
 cube/EWARM/*
 cube/.mxproject
 pcb/*.htm
+*.DS_Store
